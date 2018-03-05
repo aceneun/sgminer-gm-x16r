@@ -670,4 +670,18 @@ __constant const sph_u32 mixtab3_c[] = {
     SMIX(S00, S01, S02, S03); \
   } while (0)
 
+#define FUGUE512_4(x, y, z, w) do { \
+	FUGUE512_3(x, y, z); \
+	TIX4(w, S00, S01, S04, S07, S08, S22, S24, S27, S30); \
+	CMIX36(S33, S34, S35, S01, S02, S03, S15, S16, S17); \
+	SMIX(S33, S34, S35, S00); \
+	CMIX36(S30, S31, S32, S34, S35, S00, S12, S13, S14); \
+	SMIX(S30, S31, S32, S33); \
+	CMIX36(S27, S28, S29, S31, S32, S33, S09, S10, S11); \
+	SMIX(S27, S28, S29, S30); \
+	CMIX36(S24, S25, S26, S28, S29, S30, S06, S07, S08); \
+	SMIX(S24, S25, S26, S27); \
+} while (0)
+
+
 

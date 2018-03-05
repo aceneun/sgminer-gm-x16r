@@ -1260,6 +1260,7 @@ static void get_opencl_statline(char *buf, size_t bufsiz, struct cgpu_info *gpu)
 
 struct opencl_thread_data {
   cl_int(*queue_kernel_parameters)(_clState *, dev_blk_ctx *, cl_uint);
+  cl_int(*enqueue_kernels)(_clState *, size_t*, size_t*, size_t*);
   uint32_t *res;
 };
 
@@ -1339,6 +1340,7 @@ static bool opencl_thread_init(struct thr_info *thr)
   }
 
   thrdata->queue_kernel_parameters = gpu->algorithm.queue_kernel;
+  thrdata->enqueue_kernels = gpu->algorithm.enqueue_kernels;
   thrdata->res = (uint32_t *)calloc(BUFFERSIZE, 1);
 
   if (!thrdata->res) {
@@ -1564,6 +1566,11 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
         }
       }
     }
+  }
+  else if (thrdata->enqueue_kernels) {
+	status = thrdata->enqueue_kernels(clState, p_global_work_offset, globalThreads, localThreads);
+	if (unlikely(status != CL_SUCCESS))
+		return -1;
   }
   else {
     status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel, 1, p_global_work_offset,
