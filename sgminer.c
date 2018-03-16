@@ -9154,9 +9154,9 @@ int main(int argc, char *argv[])
 
   mutex_init(&eth_nonce_lock);
 #ifdef WIN32
-  rand_s(&eth_nonce);
-  for (int i = 0; i < sizeof(entropy); i += 4)
-    rand_s((uint32_t*)(entropy + i));
+  eth_nonce = (uint32_t)rand();
+  for (int i = 0; i < sizeof(entropy)/4; i ++)
+    ((uint32_t*)entropy)[i] = (uint32_t)rand();
 #else
   int fd = open("/dev/urandom", O_RDONLY);
   if (fd < 0)
