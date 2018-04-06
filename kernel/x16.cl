@@ -42,6 +42,8 @@
   #define SPH_BIG_ENDIAN 1
 #endif
 
+// #define NO_AMD_OPS
+
 #define SPH_UPTR sph_u64
 
 typedef unsigned int sph_u32;
