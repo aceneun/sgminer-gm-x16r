@@ -681,6 +681,29 @@ bool eth_hex2bin(unsigned char *p, const char *hexstr, size_t len)
   return hex2bin(p, hexstr, len);
 }
 
+char *bytearray2hex(const uint8_t *p, size_t len)
+{
+  char *s = (char *)calloc(len+1,1);
+  if (unlikely(!s))
+    quithere(1, "Failed to calloc");
+
+  for (uint8_t j = 0; j < len; j++) {
+    if (unlikely(p[j] >= 16))
+      quithere(1, "invalid hex digit");
+    sprintf(&s[j], "%X", p[j]);
+  }
+  s[len] = '\0';
+  return s;
+}
+
+bool bytearray_eq(const uint8_t *x, const uint8_t *y, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    if (x[i] != y[i])
+      return false;
+  }
+  return true;
+}
+
 bool fulltest(const unsigned char *hash, const unsigned char *target)
 {
   uint32_t *hash32 = (uint32_t *)hash;
@@ -1277,7 +1300,7 @@ static enum send_ret __stratum_send(struct pool *pool, char *s, ssize_t len)
   if (opt_protocol) {
     applog(LOG_DEBUG, "SEND: %s", s);
   }
-  
+
   strcat(s, "\n");
   len++;
 
@@ -1542,7 +1565,7 @@ static bool parse_notify_equihash(struct pool *pool, json_t *val)
   json_t *arr = NULL;
 
   job_id = json_array_string(val, 0);
-  
+
   merkles = 1;
 
   bbversion = json_array_string(val, 1);
@@ -1556,17 +1579,17 @@ static bool parse_notify_equihash(struct pool *pool, json_t *val)
   if (!job_id || !prev_hash || !merkle || !reserved || !bbversion || !nbit || !ntime) {
     goto out;
   }
-  
+
   applog(LOG_DEBUG, "Valid Notify");
 
   cg_wlock(&pool->data_lock);
-  
+
   free(pool->swork.job_id);
   free(pool->swork.prev_hash);
   free(pool->swork.bbversion);
   free(pool->swork.nbit);
   free(pool->swork.ntime);
-  
+
   pool->swork.job_id = job_id;
   pool->swork.prev_hash = prev_hash;
 
@@ -1581,30 +1604,30 @@ static bool parse_notify_equihash(struct pool *pool, json_t *val)
   if (pool->next_diff > 0) {
     pool->swork.diff = pool->next_diff;
   }
-  
+
   if (clean) {
     pool->nonce2 = 0;
   }
-  
+
   pool->merkle_offset = strlen(pool->swork.bbversion) + strlen(pool->swork.prev_hash);
-  
+
   pool->swork.header_len = (pool->merkle_offset / 2) +
           /* merkle_hash */  32 +
           /* reserved */ 32 +
          (strlen(pool->swork.ntime) / 2) +
          (strlen(pool->swork.nbit) / 2) +
           /* partial nonce */    20;
-  
+
   pool->merkle_offset /= 2;
   pool->swork.header_len = pool->swork.header_len * 2 + 1;
-  
+
   applog(LOG_DEBUG, "%s: pool->swork.header_len = %d", __func__, pool->swork.header_len);
-  
+
   align_len(&pool->swork.header_len);
   if ((header = (char *)malloc(pool->swork.header_len)) == NULL) {
       quithere(1, "%s: Failed to malloc header.", __func__);
   }
-  
+
   snprintf(header, pool->swork.header_len,
     "%s%s%s%s%s%s%s",
     pool->swork.bbversion,
@@ -1615,14 +1638,14 @@ static bool parse_notify_equihash(struct pool *pool, json_t *val)
     pool->swork.nbit,
     "0000000000000000000000000000000000000000" /* partial empty nonce just to pad */
   );
-  
+
   if (unlikely(!hex2bin(pool->header_bin, header, 128))) {
     applog(LOG_WARNING, "%s: Failed to convert header to header_bin, got %s", __func__, header);
     cg_wunlock(&pool->data_lock);
     pool_failed(pool);
     goto out;
   }
-  
+
   /* A notify message is the closest stratum gets to a getwork */
   pool->getwork_requested++;
   total_getworks++;
@@ -1659,7 +1682,7 @@ out:
     free(ntime);
   }
   free(header);
-  
+
   return ret;
 }
 
@@ -1668,7 +1691,7 @@ static bool parse_notify(struct pool *pool, json_t *val)
   if (pool->algorithm.type == ALGO_EQUIHASH) {
     return parse_notify_equihash(pool, val);
   }
-  
+
   char *job_id, *prev_hash, *coinbase1, *coinbase2, *bbversion, *nbit,
        *ntime, *header;
   size_t cb1_len, cb2_len, alloc_len;
@@ -1830,7 +1853,7 @@ static bool parse_notify_ethash(struct pool *pool, json_t *val)
   SeedHashStr = json_array_string(val, 2);
   TgtStr = json_array_string(val, 3);
   clean = json_is_true(json_array_get(val, 4));
-  
+
   if(json_array_size(val) == 6) {
     applog(LOG_DEBUG, "Pool supports network target.");
     NetDiffStr = json_array_string(val, 5);
@@ -1841,35 +1864,35 @@ static bool parse_notify_ethash(struct pool *pool, json_t *val)
     ret = false;
     goto out;
   }
-  
+
   ret &= eth_hex2bin(EthWork, EthWorkStr, 32);
-  
+
   ret &= eth_hex2bin(SeedHash, SeedHashStr, 32);
-  
+
   ret &= eth_hex2bin(Target, TgtStr, 32);
-  
+
   if (!ret || (NetDiffStr != NULL && !eth_hex2bin(NetDiff, NetDiffStr, 32))) {
     ret = false;
     goto out;
   }
-  
+
   cg_wlock(&pool->data_lock);
-  
+
   free(pool->swork.job_id);
   pool->swork.job_id = strdup(job_id);
   pool->swork.clean = clean;
- 
+
   if (memcmp(pool->eth_cache.seed_hash, SeedHash, 32)) {
     pool->eth_cache.current_epoch = EthCalcEpochNumber(SeedHash);
     memcpy(pool->eth_cache.seed_hash, SeedHash, 32);
     eth_gen_cache(pool);
   }
   memcpy(pool->EthWork, EthWork, 32);
-  
+
   swab256(pool->Target, Target);
   pool->swork.diff = le256todiff(pool->Target, pool->algorithm.diff_multiplier2);
   suffix_string_double(pool->swork.diff, pool->diff, sizeof(pool->diff), 0);
-  
+
   pool->diff1 = 0;
   if (NetDiffStr != NULL) {
     swab256(pool->NetDiff, NetDiff);
@@ -1877,7 +1900,7 @@ static bool parse_notify_ethash(struct pool *pool, json_t *val)
   }
   pool->getwork_requested++;
   //pool->eth_cache.disabled = false;
-  
+
   cg_wunlock(&pool->data_lock);
 
   if (opt_protocol) {
@@ -1932,28 +1955,28 @@ bool parse_notify_cn(struct pool *pool, json_t *val)
   }
 
   const char *blobval = json_string_value(blob);
-  
+
   if (strlen(blobval) > 254) {
     applog(LOG_ERR, "Got a massive blob from pool.");
     ret = false;
     goto out;
   }
-  
+
   if (!hex2bin(XMRBlob, blobval, strlen(blobval) / 2)) {
     ret = false;
     goto out;
   }
-  
+
   job_id = json_string_value(jid);
   hex2bin((uint8_t*) &XMRTarget, json_string_value(target), 4);
 
   cg_wlock(&pool->data_lock);
-  
+
   free(pool->swork.job_id);
-  
+
   pool->swork.job_id = strdup(job_id);
   pool->swork.clean = true;
-  
+
   pool->XMRBlobLen = strlen(blobval) >> 1;
   pool->diff1 = 0;
   memcpy(pool->XMRBlob, XMRBlob, pool->XMRBlobLen);
@@ -1962,9 +1985,9 @@ bool parse_notify_cn(struct pool *pool, json_t *val)
   pool->swork.diff = (double)UINT32_MAX / XMRTarget;
   suffix_string_double(pool->swork.diff, pool->diff, sizeof(pool->diff), 0);
   pool->getwork_requested++;
-  
+
   cg_wunlock(&pool->data_lock);
-  
+
   mutex_lock(&pool->XMRGlobalNonceLock);
   pool->XMRGlobalNonce = 0;
   mutex_unlock(&pool->XMRGlobalNonceLock);
@@ -2055,22 +2078,22 @@ static bool parse_extranonce_equihash(struct pool *pool, json_t *val)
   if (!(n1str = json_array_string(val, 1))) {
     return false;
   }
-  
+
   cg_wlock(&pool->data_lock);
   free(pool->nonce1);
   pool->nonce1 = n1str;
   pool->n1_len = strlen(n1str) / 2; //size in bytes of nonce1 in the header
-  
+
   free(pool->nonce1bin);
   if (unlikely(!(pool->nonce1bin = (unsigned char *)calloc(pool->n1_len, 1)))) {
     quithere(1, "%s: Failed to calloc pool->nonce1bin", __func__);
   }
 
-  hex2bin(pool->nonce1bin, pool->nonce1, pool->n1_len); 
+  hex2bin(pool->nonce1bin, pool->nonce1, pool->n1_len);
   pool->n2size = 64 - pool->n1_len; //size in bytes of nonce2 in the header
   pool->nonce2 = 0; //reset nonce 2 to 0
   cg_wunlock(&pool->data_lock);
-  
+
   applog(LOG_NOTICE, "%s extranonce set to %s", get_pool_name(pool), n1str);
 
   return true;
@@ -2233,7 +2256,7 @@ bool parse_method(struct pool *pool, char *s)
   json_error_t err;
   bool ret = false;
   char *buf;
-  
+
   if (!s) {
     return ret;
   }
@@ -2242,13 +2265,13 @@ bool parse_method(struct pool *pool, char *s)
     applog(LOG_INFO, "JSON decode failed(%d): %s", err.line, err.text);
     return ret;
   }
-  
+
   if (!(method = json_object_get(val, "method"))) {
     goto done;
   }
-  
+
   params = json_object_get(val, "params");
-  
+
   // Ethash Stratum sends no error
   if(pool->algorithm.type != ALGO_ETHASH)
   {
@@ -2270,14 +2293,14 @@ bool parse_method(struct pool *pool, char *s)
     goto done;
     }
   }
-  
+
   buf = (char *)json_string_value(method);
   if (!buf) {
     goto done;
   }
-  
+
   applog(LOG_DEBUG, "We made it to parse_method()!");
-  
+
   if (!strncasecmp(buf, "mining.notify", 13)) {
     if (pool->algorithm.type == ALGO_ETHASH) {
       ret = parse_notify_ethash(pool, params);
@@ -2285,11 +2308,11 @@ bool parse_method(struct pool *pool, char *s)
     else {
       ret = parse_notify(pool, params);
     }
-    
+
     pool->stratum_notify = ret;
     goto done;
   }
-  
+
   //cryptonight uses the "job" method instead of mining.notify
   if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
     if (!strncasecmp(buf, "job", 3)) {
@@ -2299,11 +2322,11 @@ bool parse_method(struct pool *pool, char *s)
       else {
         pool->stratum_notify = ret = false;
       }
-      
+
       goto done;
     }
   }
-  
+
   if (!strncasecmp(buf, "mining.set_difficulty", 21) && parse_diff(pool, params)) {
     ret = true;
     goto done;
@@ -2423,7 +2446,7 @@ bool auth_stratum(struct pool *pool)
   if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
     sprintf(s, "{\"method\": \"login\", \"params\": {\"login\": \"%s\", \"pass\": \"%s\", \"agent\": \"%s/%s\"}, \"id\": 1}",
       pool->rpc_user, pool->rpc_pass, PACKAGE, VERSION);
-    
+
     swork_id++;
   }
   else {
@@ -2469,7 +2492,7 @@ bool auth_stratum(struct pool *pool)
 
     goto out;
   }
-  
+
   //check if the result contains an id... if so then we need to process as first job
   if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
     if ((res_id = json_object_get(res_val, "id"))) {
@@ -2477,7 +2500,7 @@ bool auth_stratum(struct pool *pool)
       strcpy(pool->XMRAuthID, json_string_value(res_id));
       applog(LOG_DEBUG, "XMR AuthID: %s", pool->XMRAuthID);
       cg_wunlock(&pool->data_lock);
-      
+
       //get the job object and send to parse notify
       if ((res_job = json_object_get(res_val, "job"))) {
         if (parse_notify_cn(pool, res_job)) {
@@ -2489,7 +2512,7 @@ bool auth_stratum(struct pool *pool)
       }
     }
   }
-  
+
   ret = true;
   applog(LOG_INFO, "Stratum authorisation success for %s", get_pool_name(pool));
   pool->probed = true;
@@ -2942,7 +2965,7 @@ resend:
     sockd = false;
     goto out;
   }
-  
+
   //Cryptonight doesn't subscribe...
   if(pool->algorithm.type == ALGO_CRYPTONIGHT) {
     if (pool->stratum_url == NULL)
@@ -2959,7 +2982,7 @@ resend:
     json_decref(val);
     return true;
   }
-  
+
   sockd = true;
 
   if (recvd) {
@@ -2973,7 +2996,7 @@ resend:
     else {
       if (pool->algorithm.type == ALGO_EQUIHASH) {
         sprintf(s, "{\"id\":%d, \"method\":\"mining.subscribe\", \"params\":[\""PACKAGE"/"CGMINER_VERSION"\", null, \"%s\", \"%s\"]}", swork_id++, pool->sockaddr_url, pool->stratum_port);
-      } 
+      }
       else {
         sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": [\""PACKAGE"/"CGMINER_VERSION"\"]}", swork_id++);
       }
@@ -3021,23 +3044,23 @@ resend:
 
     goto out;
   }
-  
+
   if(pool->algorithm.type == ALGO_ETHASH)
   {
     if(!pool->stratum_url) pool->stratum_url = pool->sockaddr_url;
-    
+
     cg_wlock(&pool->data_lock);
     pool->stratum_active = true;
     pool->next_diff = 0;
     pool->swork.diff = 1;
-    
+
     pool->sessionid = NULL;
     free(pool->nonce1);
     pool->nonce1 = NULL;
     pool->n1_len = 0;
     pool->n2size = 4;
     cg_wunlock(&pool->data_lock);
-    
+
     json_decref(val);
     return true;
   }
@@ -3045,10 +3068,10 @@ resend:
     if (!(ret = parse_extranonce(pool, res_val))) {
       applog(LOG_DEBUG, "%s: Failed to get parse extranonce.", __func__);
     }
-    
+
     goto out;
   }
-  
+
   sessionid = get_sessionid(res_val);
   if (!sessionid) {
     applog(LOG_DEBUG, "Failed to get sessionid in initiate_stratum");
@@ -3060,7 +3083,7 @@ resend:
     free(sessionid);
     goto out;
   }
-  
+
   n2size = json_integer_value(json_array_get(res_val, 2));
   if (n2size < 1)
   {
@@ -3073,29 +3096,29 @@ resend:
   cg_wlock(&pool->data_lock);
   free(pool->nonce1);
   free(pool->sessionid);
-  
+
   pool->sessionid = sessionid;
   pool->nonce1 = nonce1;
   pool->n1_len = strlen(nonce1) / 2;
-  
+
   free(pool->nonce1bin);
-  
+
   pool->nonce1bin = (unsigned char *)calloc(pool->n1_len, 1);
   if (unlikely(!pool->nonce1bin)) {
     quithere(1, "Failed to calloc pool->nonce1bin");
   }
-  
+
   hex2bin(pool->nonce1bin, pool->nonce1, pool->n1_len);
-  
+
   pool->n2size = n2size;
   cg_wunlock(&pool->data_lock);
 
   if (sessionid) {
     applog(LOG_DEBUG, "%s stratum session id: %s", get_pool_name(pool), pool->sessionid);
   }
-  
+
   ret = true;
-  
+
 out:
   if (ret) {
     if (!pool->stratum_url)
