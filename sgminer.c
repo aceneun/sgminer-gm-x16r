@@ -194,6 +194,12 @@ double opt_diff_mult = 0.0;
 char *opt_kernel_path;
 char *sgminer_path;
 
+bool opt_benchmark = false;
+uint8_t opt_benchmark_seq[17] = {
+  0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
+  0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0XE, 0XF
+};
+
 #define QUIET (opt_quiet || opt_realquiet)
 
 struct thr_info *control_thr;
@@ -371,7 +377,7 @@ static void set_current_pool(struct pool *pool) {
   currentpool = pool;
 
   cg_wlock(&currentpool->data_lock);
-  if (currentpool->algorithm.type == ALGO_ETHASH) 
+  if (currentpool->algorithm.type == ALGO_ETHASH)
     currentpool->eth_cache.disabled = false;
   cg_wunlock(&currentpool->data_lock);
 }
@@ -1398,6 +1404,24 @@ char *set_difficulty_multiplier(char *arg)
   return NULL;
 }
 
+char *set_benchmark_sequence(char *arg)
+{
+  if (!(arg && arg[0]))
+    return "Invalid parameter for set benchmark sequence";
+  if (strlen(arg) != 16)
+    return "Benchmark sequence must be 16 characters";
+  uint i;
+  for (i = 0; i < strlen(arg); i++) {
+    if (!( ('0' <= arg[i] <= '9') || ('A' <= arg[i] <= 'F')))
+      return sprintf("Invalid hex digit %c", arg[i]);
+    if (arg[i] >= 'A')
+      opt_benchmark_seq[i] = arg[i] - 'A' + 10;
+    else
+      opt_benchmark_seq[i] = arg[i] - '0';
+  }
+  opt_benchmark = true;
+}
+
 /* These options are available from config file or commandline */
 struct opt_table opt_config_table[] = {
   OPT_WITH_ARG("--algorithm|--kernel|-k",
@@ -1558,6 +1582,15 @@ struct opt_table opt_config_table[] = {
   OPT_WITHOUT_ARG("--luffa-parallel",
       opt_set_bool, &opt_luffa_parallel,
       "Set SPH_LUFFA_PARALLEL for Xn derived algorithms (Can give better hashrate for some GPUs)"),
+  OPT_WITHOUT_ARG("--benchmark",
+      opt_set_bool, &opt_benchmark,
+      "Enables benchmark mode for x16r/x16s. Hardcodes the hash order to"
+      " run each hash function exactly once"),
+  OPT_WITH_ARG("--benchmark-sequence",
+      set_benchmark_sequence, NULL, NULL,
+      "Hardcode the hash order in x16r/x16s"
+      " for benchmarking purposes. Must be an uppercase hex string"
+      "of length 16"),
 #ifdef HAVE_CURSES
   OPT_WITHOUT_ARG("--incognito",
       opt_set_bool, &opt_incognito,
@@ -2071,7 +2104,7 @@ static bool __build_gbt_txns(struct pool *pool, json_t *res_val)
     applog(LOG_DEBUG, "gbt_txns: %s", pool->coinbasetxn);
     goto out;
   }
-  
+
   if (!pool->gbt_txns)
     goto out;
 
@@ -3324,7 +3357,7 @@ static bool submit_upstream_work(struct work *work, CURL *curl, char *curl_err_s
       str_len += strlen(workid);
     }
     */
-    
+
     uint8_t txn_cnt_bin[9];
     cg_rlock(&pool->gbt_lock);
     int txn_cnt_len = add_var_int(txn_cnt_bin, pool->gbt_txns + 1);
@@ -5609,11 +5642,11 @@ static bool parse_stratum_response(struct pool *pool, char *s)
 
         if (err_val) {
           ss = json_dumps(err_val, JSON_INDENT(3));
-        } 
+        }
         else {
           ss = strdup("(unknown reason)");
         }
-        
+
         applog(LOG_INFO, "JSON-RPC response decode failed: %s", ss);
 
         free(ss);
@@ -5835,7 +5868,7 @@ static void *stratum_rthread(void *userdata)
     FD_SET(pool->sock, &rd);
     timeout.tv_sec = 90;
     timeout.tv_usec = 0;
-    
+
     /* The protocol specifies that notify messages should be sent
      * every minute so if we fail to receive any for 90 seconds we
      * assume the connection has been dropped and treat this pool
@@ -5879,7 +5912,7 @@ static void *stratum_rthread(void *userdata)
     stratum_resumed(pool);
 
     applog(LOG_DEBUG, "%s: parsing %s...", __func__, s);
-    
+
     if (!parse_method(pool, s) && !parse_stratum_response(pool, s))
       applog(LOG_INFO, "Unknown stratum msg: %s", s);
     else if (pool->swork.clean) {
@@ -5888,16 +5921,16 @@ static void *stratum_rthread(void *userdata)
       /* Generate a single work item to update the current
        * block database */
       pool->swork.clean = false;
-      
+
       switch(pool->algorithm.type) {
         case ALGO_ETHASH:
           gen_stratum_work_eth(pool, work);
           break;
-        
+
         case ALGO_CRYPTONIGHT:
           gen_stratum_work_cn(pool, work);
           break;
-          
+
         default:
           gen_stratum_work(pool, work);
       }
@@ -5988,14 +6021,14 @@ static void *stratum_sthread(void *userdata)
       applog(LOG_DEBUG, "stratum_sthread() algorithm = %s", pool->algorithm.name);
 
       char *ASCIINonce = bin2hex(work->data + 39, 4);
-      
+
       ASCIIResult = bin2hex(work->hash, 32);
-      
+
       mutex_lock(&sshare_lock);
       /* Give the stratum share a unique id */
       sshare->id = swork_id++;
       mutex_unlock(&sshare_lock);
-      
+
       snprintf(s, s_size, "{\"method\": \"submit\", \"params\": {\"id\": \"%s\", \"job_id\": \"%s\", \"nonce\": \"%s\", \"result\": \"%s\"}, \"id\":%d}", pool->XMRAuthID, work->job_id, ASCIINonce, ASCIIResult, sshare->id);
 
       free(ASCIINonce);
@@ -6010,13 +6043,13 @@ static void *stratum_sthread(void *userdata)
       sshare->work = work;
 
       applog(LOG_DEBUG, "stratum_sthread() algorithm = %s", pool->algorithm.name);
-      
+
       //get nonce minus extranonce set by server
       nonce = bin2hex(work->equihash_data+108, 32);
       solution = bin2hex(work->equihash_data+140, 1347);
-      
+
       //applog(LOG_DEBUG, "%s: Nonce set to %s", __func__, nonce+strlen(work->nonce1));
-      
+
       mutex_lock(&sshare_lock);
       /* Give the stratum share a unique id */
       sshare->id = swork_id++;
@@ -6189,7 +6222,7 @@ retry_stratum:
 
       if (ret) {
         init_stratum_threads(pool);
-        
+
         if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
           struct work *work = make_work();
           gen_stratum_work_cn(pool, work);
@@ -6609,7 +6642,7 @@ static void gen_stratum_work_cn(struct pool *pool, struct work *work)
     return;
 
   applog(LOG_DEBUG, "[THR%d] gen_stratum_work_cn() - algorithm = %s", work->thr_id, pool->algorithm.name);
-  
+
   cg_rlock(&pool->data_lock);
   work->job_id = strdup(pool->swork.job_id);
   //strcpy(work->XMRID, pool->XMRID);
@@ -6621,7 +6654,7 @@ static void gen_stratum_work_cn(struct pool *pool, struct work *work)
   work->network_diff = pool->diff1;
   work->is_monero = pool->is_monero;
   cg_runlock(&pool->data_lock);
-  
+
   local_work++;
   work->pool = pool;
   work->stratum = true;
@@ -6635,7 +6668,7 @@ static void gen_stratum_work_cn(struct pool *pool, struct work *work)
   work->drv_rolllimit = 0;
 
   cgtime(&work->tv_staged);
-  
+
   applog(LOG_DEBUG, "gen_stratum_work_cn() done.");
 }
 
@@ -6647,15 +6680,15 @@ static void gen_stratum_work_equihash(struct pool *pool, struct work *work)
 
   /* Downgrade to a read lock to read off the pool variables */
   cg_dwlock(&pool->data_lock);
-  
+
   /* equihash already has the merkle root in the header no need to change it */
   memset(work->equihash_data, 0, 1487);
   memcpy(work->equihash_data, pool->header_bin, 128);
-  
+
   //add pool extra nonce
   hex2bin(work->equihash_data + 108, pool->nonce1, strlen(pool->nonce1) / 2);
   memcpy(work->equihash_data + 108 + 20 - work->nonce2_len, &work->nonce2, work->nonce2_len);
- 
+
   //add solutionsize
   add_var_int(work->equihash_data + 140, 1344);
 
@@ -6702,7 +6735,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
     gen_stratum_work_equihash(pool, work);
     return;
   }
-  
+
   unsigned char merkle_root[32], merkle_sha[64];
   uint32_t *data32, *swap32;
   uint64_t nonce2le;
@@ -6859,7 +6892,7 @@ static void apply_initial_gpu_settings(struct pool *pool)
   rd_lock(&mining_thr_lock);
 
   apply_switcher_options(options, pool);
-  
+
   //manually apply algorithm
   for (i = 0; i < nDevs; i++)
   {
@@ -9602,15 +9635,15 @@ retry:
         case ALGO_ETHASH:
           gen_stratum_work_eth(pool, work);
           break;
-          
+
         case ALGO_CRYPTONIGHT:
           gen_stratum_work_cn(pool, work);
           break;
-          
+
         default:
            gen_stratum_work(pool, work);
       }
- 
+
       applog(LOG_DEBUG, "Generated stratum work");
       stage_work(work);
       continue;

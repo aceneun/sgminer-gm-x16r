@@ -281,6 +281,9 @@ extern int opt_remoteconf_retry;
 extern int opt_remoteconf_wait;
 extern bool opt_remoteconf_usecache;
 
+extern bool opt_benchmark;
+extern uint8_t opt_benchmark_seq[17];
+
 
 enum alive {
   LIFE_WELL,
@@ -624,7 +627,7 @@ struct cgpu_info {
   bool has_adl;
   struct gpu_adl adl;
   gpu_sysfs_info sysfs_info;
-  
+
   int gpu_engine;
   int min_engine;
   int gpu_fan;
@@ -633,7 +636,7 @@ struct cgpu_info {
   int gpu_memdiff;
   int gpu_powertune;
   float gpu_vddc;
-  
+
   double diff1;
   double diff_accepted;
   double diff_rejected;
@@ -1364,7 +1367,7 @@ struct pool {
   uint8_t Target[32];
   uint8_t EthWork[32];
   uint8_t NetDiff[32];
-  
+
   //XMR stuff
   char XMRAuthID[64];
   uint32_t XMRBlobLen;
@@ -1372,7 +1375,7 @@ struct pool {
   pthread_mutex_t XMRGlobalNonceLock;
   uint32_t XMRGlobalNonce;
   bool is_monero;
-  
+
   double diff_accepted;
   double diff_rejected;
   double diff_stale;
@@ -1528,11 +1531,11 @@ struct work {
 
   uint32_t eth_epoch;
   uint64_t Nonce;
-  
+
   /* cryptonight stuff */
   uint32_t XMRBlobLen;
   bool is_monero;
-  
+
   unsigned char equihash_data[1487];
 
   int   rolls;

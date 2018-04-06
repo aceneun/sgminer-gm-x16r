@@ -738,7 +738,13 @@ static cl_int queue_x16r_kernel(struct __clState *clState, struct _dev_blk_ctx *
 
   le_target = *(cl_ulong *)(blk->work->device_target + 24);
   flip80(clState->cldata, blk->work->data);
-  x16r_getalgolist(&clState->cldata[4], hashOrder);
+  if (opt_benchmark) {
+    for (size_t i = 0; i < X16R_HASH_FUNC_COUNT; i++)
+      hashOrder[i] = opt_benchmark_seq[i];
+  }
+  else {
+    x16r_getalgolist(&clState->cldata[4], hashOrder);
+  }
 
   if (!bytearray_eq(clState->hash_order, hashOrder, X16R_HASH_FUNC_COUNT)) {
     for (size_t i = 0; i < X16R_HASH_FUNC_COUNT; i++)
@@ -783,7 +789,13 @@ static cl_int queue_x16s_kernel(struct __clState *clState, struct _dev_blk_ctx *
 
   le_target = *(cl_ulong *)(blk->work->device_target + 24);
   flip80(clState->cldata, blk->work->data);
-  x16s_getalgolist(&clState->cldata[4], hashOrder);
+  if (opt_benchmark) {
+    for (size_t i = 0; i < X16S_HASH_FUNC_COUNT; i++)
+      hashOrder[i] = opt_benchmark_seq[i];
+  }
+  else {
+    x16s_getalgolist(&clState->cldata[4], hashOrder);
+  }
 
   if (!bytearray_eq(clState->hash_order, hashOrder, X16S_HASH_FUNC_COUNT)) {
     for (size_t i = 0; i < X16S_HASH_FUNC_COUNT; i++)
