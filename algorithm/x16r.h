@@ -33,7 +33,7 @@ extern
 const char* X16R_ALGO_NAMES[X16R_HASH_FUNC_COUNT];
 
 static inline
-void x16r_getalgolist(const uint8_t* data, uint8_t *output)
+void x16r_getalgolist(const uint8_t* data, char *output)
 {
   uint8_t *orig = output;
 
@@ -44,4 +44,4 @@ void x16r_getalgolist(const uint8_t* data, uint8_t *output)
 }
 
 
-#endif /* X14_H */
+#endif /* X16R_H */

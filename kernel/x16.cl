@@ -1,5 +1,5 @@
 /*
- * X16R kernel implementation.
+ * X16R/S kernel implementation.
  *
  * ==========================(LICENSE BEGIN)============================
  *
@@ -30,8 +30,8 @@
  * @author   phm <phm@inbox.com>
  */
 
-#ifndef X16R_CL
-#define X16R_CL
+#ifndef X16_CL
+#define X16_CL
 
 #define DEBUG(x)
 
@@ -3034,4 +3034,4 @@ __kernel void search(__global hash_t* hashes, __global uint* output, const ulong
   }
 }
 
-#endif // X14_CL
+#endif // X16_CL

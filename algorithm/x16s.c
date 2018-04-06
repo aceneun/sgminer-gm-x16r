@@ -1,5 +1,5 @@
 /*-
- * Copyright 2009 Colin Percival, 2011 ArtForz
+ * Copyright 2009 Colin Percival, 2011 ArtForz, 2018 brianmct
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
 #include "config.h"
 #include "miner.h"
 
-#include "x16r.h"
+#include "x16s.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -61,7 +61,7 @@
 #endif
 
 
-const char* X16R_ALGO_NAMES[X16R_HASH_FUNC_COUNT] = {
+const char* X16S_ALGO_NAMES[X16S_HASH_FUNC_COUNT] = {
   "blake",
   "bmw512",
   "groestl",
@@ -93,7 +93,7 @@ static inline void be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len
     dst[i] = htobe32(src[i]);
 }
 
-void x16r_hash(void *state, const void *input)
+void x16s_hash(void *state, const void *input)
 {
   unsigned char _ALIGN(64) hash[128];
 
@@ -116,92 +116,92 @@ void x16r_hash(void *state, const void *input)
 
   const void *in = input;
   int size = 80;
-  uint8_t hashOrder[X16R_HASH_FUNC_COUNT];
+  uint8_t hashOrder[X16S_HASH_FUNC_COUNT];
 
   uint32_t *in32 = (uint32_t*) input;
-  x16r_getalgolist((uint8_t*)input + 4, hashOrder);
+  x16s_getalgolist((uint8_t*)input + 4, hashOrder);
 
-  for (int i = 0; i < X16R_HASH_FUNC_COUNT; i++)
+  for (int i = 0; i < X16S_HASH_FUNC_COUNT; i++)
   {
     const uint8_t algo = hashOrder[i];
 
     switch (algo) {
-    case X16R_BLAKE:
+    case X16S_BLAKE:
       sph_blake512_init(&ctx_blake);
       sph_blake512(&ctx_blake, in, size);
       sph_blake512_close(&ctx_blake, hash);
       break;
-    case X16R_BMW:
+    case X16S_BMW:
       sph_bmw512_init(&ctx_bmw);
       sph_bmw512(&ctx_bmw, in, size);
       sph_bmw512_close(&ctx_bmw, hash);
       break;
-    case X16R_GROESTL:
+    case X16S_GROESTL:
       sph_groestl512_init(&ctx_groestl);
       sph_groestl512(&ctx_groestl, in, size);
       sph_groestl512_close(&ctx_groestl, hash);
       break;
-    case X16R_SKEIN:
+    case X16S_SKEIN:
       sph_skein512_init(&ctx_skein);
       sph_skein512(&ctx_skein, in, size);
       sph_skein512_close(&ctx_skein, hash);
       break;
-    case X16R_JH:
+    case X16S_JH:
       sph_jh512_init(&ctx_jh);
       sph_jh512(&ctx_jh, in, size);
       sph_jh512_close(&ctx_jh, hash);
       break;
-    case X16R_KECCAK:
+    case X16S_KECCAK:
       sph_keccak512_init(&ctx_keccak);
       sph_keccak512(&ctx_keccak, in, size);
       sph_keccak512_close(&ctx_keccak, hash);
       break;
-    case X16R_LUFFA:
+    case X16S_LUFFA:
       sph_luffa512_init(&ctx_luffa);
       sph_luffa512(&ctx_luffa, in, size);
       sph_luffa512_close(&ctx_luffa, hash);
       break;
-    case X16R_CUBEHASH:
+    case X16S_CUBEHASH:
       sph_cubehash512_init(&ctx_cubehash);
       sph_cubehash512(&ctx_cubehash, in, size);
       sph_cubehash512_close(&ctx_cubehash, hash);
       break;
-    case X16R_SHAVITE:
+    case X16S_SHAVITE:
       sph_shavite512_init(&ctx_shavite);
       sph_shavite512(&ctx_shavite, in, size);
       sph_shavite512_close(&ctx_shavite, hash);
       break;
-    case X16R_SIMD:
+    case X16S_SIMD:
       sph_simd512_init(&ctx_simd);
       sph_simd512(&ctx_simd, in, size);
       sph_simd512_close(&ctx_simd, hash);
       break;
-    case X16R_ECHO:
+    case X16S_ECHO:
       sph_echo512_init(&ctx_echo);
       sph_echo512(&ctx_echo, in, size);
       sph_echo512_close(&ctx_echo, hash);
       break;
-    case X16R_HAMSI:
+    case X16S_HAMSI:
       sph_hamsi512_init(&ctx_hamsi);
       sph_hamsi512(&ctx_hamsi, in, size);
       sph_hamsi512_close(&ctx_hamsi, hash);
       break;
-    case X16R_FUGUE:
+    case X16S_FUGUE:
       sph_fugue512_init(&ctx_fugue);
       sph_fugue512(&ctx_fugue, in, size);
       sph_fugue512_close(&ctx_fugue, hash);
       break;
-    case X16R_SHABAL:
+    case X16S_SHABAL:
       sph_shabal512_init(&ctx_shabal);
       sph_shabal512(&ctx_shabal, in, size);
       sph_shabal512_close(&ctx_shabal, hash);
       break;
-    case X16R_WHIRLPOOL:
+    case X16S_WHIRLPOOL:
       sph_whirlpool_init(&ctx_whirlpool);
       sph_whirlpool(&ctx_whirlpool, in, size);
       sph_whirlpool_close(&ctx_whirlpool, hash);
       break;
-    case X16R_SHA512:
+    case X16S_SHA512:
       sph_sha512_init(&ctx_sha512);
       sph_sha512(&ctx_sha512,(const void*) in, size);
       sph_sha512_close(&ctx_sha512,(void*) hash);
@@ -216,14 +216,14 @@ void x16r_hash(void *state, const void *input)
 static const uint32_t diff1targ = 0x0000ffff;
 
 /* Used externally as confirmation of correct OCL code */
-int x16r_test(unsigned char *pdata, const unsigned char *ptarget, uint32_t nonce)
+int x16s_test(unsigned char *pdata, const unsigned char *ptarget, uint32_t nonce)
 {
   uint32_t tmp_hash7, Htarg = le32toh(((const uint32_t *)ptarget)[7]);
   uint32_t data[20], ohash[8];
 
   be32enc_vect(data, (const uint32_t *)pdata, 19);
   data[19] = htobe32(nonce);
-  x16r_hash(ohash, data);
+  x16s_hash(ohash, data);
   tmp_hash7 = be32toh(ohash[7]);
 
   applog(LOG_DEBUG, "htarget %08lx diff1 %08lx hash %08lx",
@@ -240,7 +240,7 @@ int x16r_test(unsigned char *pdata, const unsigned char *ptarget, uint32_t nonce
   return 1;
 }
 
-void x16r_regenhash(struct work *work)
+void x16s_regenhash(struct work *work)
 {
   uint32_t data[20];
   uint32_t *nonce = (uint32_t *)(work->data + 76);
@@ -248,10 +248,10 @@ void x16r_regenhash(struct work *work)
 
   be32enc_vect(data, (const uint32_t *)work->data, 19);
   data[19] = htobe32(*nonce);
-  x16r_hash(ohash, data);
+  x16s_hash(ohash, data);
 }
 
-bool scanhash_x16r(struct thr_info *thr, const unsigned char __maybe_unused *pmidstate,
+bool scanhash_x16s(struct thr_info *thr, const unsigned char __maybe_unused *pmidstate,
          unsigned char *pdata, unsigned char __maybe_unused *phash1,
          unsigned char __maybe_unused *phash, const unsigned char *ptarget,
          uint32_t max_nonce, uint32_t *last_nonce, uint32_t n)
@@ -269,7 +269,7 @@ bool scanhash_x16r(struct thr_info *thr, const unsigned char __maybe_unused *pmi
     uint32_t ostate[8];
     *nonce = ++n;
     data[19] = (n);
-    x16r_hash(ostate, data);
+    x16s_hash(ostate, data);
     tmp_hash7 = (ostate[7]);
 
     applog(LOG_INFO, "data7 %08lx", (long unsigned int)data[7]);
