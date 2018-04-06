@@ -91,7 +91,7 @@ typedef int sph_s32;
 
 #include "blake.cl"
 #include "bmw.cl"
-#include "groestl.cl"
+#include "pallas-groestl.cl"
 #include "jh.cl"
 #include "keccak.cl"
 #include "skein.cl"
@@ -812,99 +812,229 @@ __kernel void search19(__global ulong* block, __global hash_t* hashes)
 	uint gid = get_global_id(0);
 	__global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
-#if !SPH_SMALL_FOOTPRINT_GROESTL
-	__local sph_u64 T0_C[256], T1_C[256], T2_C[256], T3_C[256];
-	__local sph_u64 T4_C[256], T5_C[256], T6_C[256], T7_C[256];
-#else
-	__local sph_u64 T0_C[256], T4_C[256];
-#endif
-	int init = get_local_id(0);
+  __local sph_u64 T0_C[256], T1_C[256], T2[256], T3[256];
+	__local sph_u64 T4[256], T5[256], T6[256], T7[256];
+  uint u;
+  int init = get_local_id(0);
 	int step = get_local_size(0);
 
-	for (int i = init; i < 256; i += step)
-	{
+	for (int i = init; i < 256; i += step) {
+    // create other tables based on T0: avoids keeping them in the kernel.
 		T0_C[i] = T0[i];
-		T4_C[i] = T4[i];
-#if !SPH_SMALL_FOOTPRINT_GROESTL
 		T1_C[i] = T1[i];
-		T2_C[i] = T2[i];
-		T3_C[i] = T3[i];
-		T5_C[i] = T5[i];
-		T6_C[i] = T6[i];
-		T7_C[i] = T7[i];
-#endif
+    T2[i] = ROTL64(T0[i], 16UL);
+    T3[i] = ROTL64(T0[i], 24UL);
+    T4[i] = ROTL64(T0[i], 32UL);
+    T5[i] = ROTL64(T0[i], 40UL);
+    T6[i] = ROTL64(T0[i], 48UL);
+    T7[i] = ROTL64(T0[i], 56UL);
 	}
-	barrier(CLK_LOCAL_MEM_FENCE);    // groestl
-#define T0 T0_C
-#define T1 T1_C
-#define T2 T2_C
-#define T3 T3_C
-#define T4 T4_C
-#define T5 T5_C
-#define T6 T6_C
-#define T7 T7_C
+  barrier(CLK_LOCAL_MEM_FENCE);
+  #define T0 T0_C
+  #define T1 T1_C
 
+  sph_u64 g[16], m[16], t0[16], t1[16], t2[16], t3[16], t4[16], t5[16], t6[16], t7[16];
 
-	sph_u64 H[16];
-	//#pragma unroll 15
-	for (unsigned int u = 0; u < 15; u ++)
-		H[u] = 0;
-#if USE_LE
-	H[15] = ((sph_u64)(512 & 0xFF) << 56) | ((sph_u64)(512 & 0xFF00) << 40);
-#else
-	H[15] = (sph_u64)512;
-#endif
-
-	sph_u64 g[16], m[16];
-	m[0] = block[0];
-	m[1] = block[1];
-	m[2] = block[2];
-	m[3] = block[3];
-	m[4] = block[4];
-	m[5] = block[5];
-	m[6] = block[6];
-	m[7] = block[7];
-	m[8] = block[8];
+  m[0] = block[0];
+  m[1] = block[1];
+  m[2] = block[2];
+  m[3] = block[3];
+  m[4] = block[4];
+  m[5] = block[5];
+  m[6] = block[6];
+  m[7] = block[7];
+  m[8] = block[8];
 	m[9] = (block[9] & 0xffffffff) ^ ((ulong)gid << 32);
+  m[10] = 0x80;
+  m[11] = 0;
+  m[12] = 0;
+  m[13] = 0;
+  m[14] = 0;
+  m[15] = M15;
 
-	//#pragma unroll 16
-	for (unsigned int u = 0; u < 16; u ++)
-		g[u] = m[u] ^ H[u];
-	m[10] = 0x80; g[10] = m[10];
-	m[11] = 0; g[11] = 0;
-	m[12] = 0; g[12] = 0;
-	m[13] = 0; g[13] = 0;
-	m[14] = 0; g[14] = 0;
-	m[15] = 0x100000000000000; g[15] = m[15] ^ H[15];
-	PERM_BIG_P(g);
-	PERM_BIG_Q(m);
+  #pragma unroll
+  for (u = 0; u < 15; u++) g[u] = m[u];
+  g[15] = M15 ^ H15;
 
-	//#pragma unroll 16
-	for (unsigned int u = 0; u < 16; u ++)
-		H[u] ^= g[u] ^ m[u];
-	sph_u64 xH[16];
 
-	//#pragma unroll 16
-	for (unsigned int u = 0; u < 16; u ++)
-		xH[u] = H[u];
-	PERM_BIG_P(xH);
+  g[0x0] ^= PC64(0x00, 0);
+  g[0x1] ^= PC64(0x10, 0);
+  g[0x2] ^= PC64(0x20, 0);
+  g[0x3] ^= PC64(0x30, 0);
+  g[0x4] ^= PC64(0x40, 0);
+  g[0x5] ^= PC64(0x50, 0);
+  g[0x6] ^= PC64(0x60, 0);
+  g[0x7] ^= PC64(0x70, 0);
+  g[0x8] ^= PC64(0x80, 0);
+  g[0x9] ^= PC64(0x90, 0);
+  g[0xA] ^= PC64(0xA0, 0);
+  g[0xB] = PC64(0xB0, 0);
+  g[0xC] = PC64(0xC0, 0);
+  g[0xD] = PC64(0xD0, 0);
+  g[0xE] = PC64(0xE0, 0);
+  g[0xF] ^= PC64(0xF0, 0);
+  t0[0x0] = B64_0(g[0x0]);
+  t1[0x0] = B64_1(g[0x0]);
+  t2[0x0] = B64_2(g[0x0]);
+  t3[0x0] = B64_3(g[0x0]);
+  t4[0x0] = B64_4(g[0x0]);
+  t5[0x0] = B64_5(g[0x0]);
+  t6[0x0] = B64_6(g[0x0]);
+  t7[0x0] = B64_7(g[0x0]);
+  t0[0x1] = B64_0(g[0x1]);
+  t1[0x1] = B64_1(g[0x1]);
+  t2[0x1] = B64_2(g[0x1]);
+  t3[0x1] = B64_3(g[0x1]);
+  t4[0x1] = B64_4(g[0x1]);
+  t5[0x1] = B64_5(g[0x1]);
+  t6[0x1] = B64_6(g[0x1]);
+  t7[0x1] = B64_7(g[0x1]);
+  t0[0x2] = B64_0(g[0x2]);
+  t1[0x2] = B64_1(g[0x2]);
+  t2[0x2] = B64_2(g[0x2]);
+  t3[0x2] = B64_3(g[0x2]);
+  t4[0x2] = B64_4(g[0x2]);
+  t5[0x2] = B64_5(g[0x2]);
+  t6[0x2] = B64_6(g[0x2]);
+  t7[0x2] = B64_7(g[0x2]);
+  t0[0x3] = B64_0(g[0x3]);
+  t1[0x3] = B64_1(g[0x3]);
+  t2[0x3] = B64_2(g[0x3]);
+  t3[0x3] = B64_3(g[0x3]);
+  t4[0x3] = B64_4(g[0x3]);
+  t5[0x3] = B64_5(g[0x3]);
+  t6[0x3] = B64_6(g[0x3]);
+  t7[0x3] = B64_7(g[0x3]);
+  t0[0x4] = B64_0(g[0x4]);
+  t1[0x4] = B64_1(g[0x4]);
+  t2[0x4] = B64_2(g[0x4]);
+  t3[0x4] = B64_3(g[0x4]);
+  t4[0x4] = B64_4(g[0x4]);
+  t5[0x4] = B64_5(g[0x4]);
+  t6[0x4] = B64_6(g[0x4]);
+  t7[0x4] = B64_7(g[0x4]);
+  t0[0x5] = B64_0(g[0x5]);
+  t1[0x5] = B64_1(g[0x5]);
+  t2[0x5] = B64_2(g[0x5]);
+  t3[0x5] = B64_3(g[0x5]);
+  t4[0x5] = B64_4(g[0x5]);
+  t5[0x5] = B64_5(g[0x5]);
+  t6[0x5] = B64_6(g[0x5]);
+  t7[0x5] = B64_7(g[0x5]);
+  t0[0x6] = B64_0(g[0x6]);
+  t1[0x6] = B64_1(g[0x6]);
+  t2[0x6] = B64_2(g[0x6]);
+  t3[0x6] = B64_3(g[0x6]);
+  t4[0x6] = B64_4(g[0x6]);
+  t5[0x6] = B64_5(g[0x6]);
+  t6[0x6] = B64_6(g[0x6]);
+  t7[0x6] = B64_7(g[0x6]);
+  t0[0x7] = B64_0(g[0x7]);
+  t1[0x7] = B64_1(g[0x7]);
+  t2[0x7] = B64_2(g[0x7]);
+  t3[0x7] = B64_3(g[0x7]);
+  t4[0x7] = B64_4(g[0x7]);
+  t5[0x7] = B64_5(g[0x7]);
+  t6[0x7] = B64_6(g[0x7]);
+  t7[0x7] = B64_7(g[0x7]);
+  t0[0x8] = B64_0(g[0x8]);
+  t1[0x8] = B64_1(g[0x8]);
+  t2[0x8] = B64_2(g[0x8]);
+  t3[0x8] = B64_3(g[0x8]);
+  t4[0x8] = B64_4(g[0x8]);
+  t5[0x8] = B64_5(g[0x8]);
+  t6[0x8] = B64_6(g[0x8]);
+  t7[0x8] = B64_7(g[0x8]);
+  t0[0x9] = B64_0(g[0x9]);
+  t1[0x9] = B64_1(g[0x9]);
+  t2[0x9] = B64_2(g[0x9]);
+  t3[0x9] = B64_3(g[0x9]);
+  t4[0x9] = B64_4(g[0x9]);
+  t5[0x9] = B64_5(g[0x9]);
+  t6[0x9] = B64_6(g[0x9]);
+  t7[0x9] = B64_7(g[0x9]);
+  t0[0xA] = B64_0(g[0xA]);
+  t1[0xA] = B64_1(g[0xA]);
+  t2[0xA] = B64_2(g[0xA]);
+  t3[0xA] = B64_3(g[0xA]);
+  t4[0xA] = B64_4(g[0xA]);
+  t5[0xA] = B64_5(g[0xA]);
+  t6[0xA] = B64_6(g[0xA]);
+  t7[0xA] = B64_7(g[0xA]);
+  t0[0xB] = B64_0(g[0xB]);
+  t1[0xB] = B64_1(g[0xB]);
+  t2[0xB] = B64_2(g[0xB]);
+  t3[0xB] = B64_3(g[0xB]);
+  t4[0xB] = B64_4(g[0xB]);
+  t5[0xB] = B64_5(g[0xB]);
+  t6[0xB] = B64_6(g[0xB]);
+  t7[0xB] = B64_7(g[0xB]);
+  t0[0xC] = B64_0(g[0xC]);
+  t1[0xC] = B64_1(g[0xC]);
+  t2[0xC] = B64_2(g[0xC]);
+  t3[0xC] = B64_3(g[0xC]);
+  t4[0xC] = B64_4(g[0xC]);
+  t5[0xC] = B64_5(g[0xC]);
+  t6[0xC] = B64_6(g[0xC]);
+  t7[0xC] = B64_7(g[0xC]);
+  t0[0xD] = B64_0(g[0xD]);
+  t1[0xD] = B64_1(g[0xD]);
+  t2[0xD] = B64_2(g[0xD]);
+  t3[0xD] = B64_3(g[0xD]);
+  t4[0xD] = B64_4(g[0xD]);
+  t5[0xD] = B64_5(g[0xD]);
+  t6[0xD] = B64_6(g[0xD]);
+  t7[0xD] = B64_7(g[0xD]);
+  t0[0xE] = B64_0(g[0xE]);
+  t1[0xE] = B64_1(g[0xE]);
+  t2[0xE] = B64_2(g[0xE]);
+  t3[0xE] = B64_3(g[0xE]);
+  t4[0xE] = B64_4(g[0xE]);
+  t5[0xE] = B64_5(g[0xE]);
+  t6[0xE] = B64_6(g[0xE]);
+  t7[0xE] = B64_7(g[0xE]);
+  t0[0xF] = B64_0(g[0xF]);
+  t1[0xF] = B64_1(g[0xF]);
+  t2[0xF] = B64_2(g[0xF]);
+  t3[0xF] = B64_3(g[0xF]);
+  t4[0xF] = B64_4(g[0xF]);
+  t5[0xF] = B64_5(g[0xF]);
+  t6[0xF] = B64_6(g[0xF]);
+  t7[0xF] = B64_7(g[0xF]);
+  g[0x0] = T0[t0[0x0]] ^ T1[t1[0x1]] ^ T2[t2[0x2]] ^ T3[t3[0x3]] ^ T4[t4[0x4]] ^ T5[t5[0x5]] ^ T6[t6[0x6]] ^ C64e(0x32f4a5f497a5c6c6);
+  g[0x1] = T0[t0[0x1]] ^ T1[t1[0x2]] ^ T2[t2[0x3]] ^ T3[t3[0x4]] ^ T4[t4[0x5]] ^ T5[t5[0x6]] ^ T6[t6[0x7]] ^ C64e(0x32f4a5f497a5c6c6);
+  g[0x2] = T0[t0[0x2]] ^ T1[t1[0x3]] ^ T2[t2[0x4]] ^ T3[t3[0x5]] ^ T4[t4[0x6]] ^ T5[t5[0x7]] ^ T6[t6[0x8]] ^ C64e(0x32f4a5f497a5c6c6);
+  g[0x3] = T0[t0[0x3]] ^ T1[t1[0x4]] ^ T2[t2[0x5]] ^ T3[t3[0x6]] ^ T4[t4[0x7]] ^ T5[t5[0x8]] ^ T6[t6[0x9]] ^ C64e(0x32f4a5f497a5c6c6);
+  g[0x4] = T0[t0[0x4]] ^ T1[t1[0x5]] ^ T2[t2[0x6]] ^ T3[t3[0x7]] ^ T4[t4[0x8]] ^ T5[t5[0x9]] ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0xF]];
+  g[0x5] = T0[t0[0x5]] ^ T1[t1[0x6]] ^ T2[t2[0x7]] ^ T3[t3[0x8]] ^ T4[t4[0x9]] ^ C64e(0xa5f497a5c6c632f4) ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0x0]];
+  g[0x6] = T0[t0[0x6]] ^ T1[t1[0x7]] ^ T2[t2[0x8]] ^ T3[t3[0x9]] ^ C64e(0xf497a5c6c632f4a5) ^ C64e(0xa5f497a5c6c632f4) ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0x1]];
+  g[0x7] = T0[t0[0x7]] ^ T1[t1[0x8]] ^ T2[t2[0x9]] ^ C64e(0x97a5c6c632f4a5f4) ^ C64e(0xf497a5c6c632f4a5) ^ C64e(0xa5f497a5c6c632f4) ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0x2]];
+  g[0x8] = T0[t0[0x8]] ^ T1[t1[0x9]] ^ C64e(0xa5c6c632f4a5f497) ^ C64e(0x97a5c6c632f4a5f4) ^ C64e(0xf497a5c6c632f4a5) ^ C64e(0xa5f497a5c6c632f4) ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0x3]];
+  g[0x9] = T0[t0[0x9]] ^ C64e(0xc6c632f4a5f497a5) ^ C64e(0xa5c6c632f4a5f497) ^ C64e(0x97a5c6c632f4a5f4) ^ C64e(0xf497a5c6c632f4a5) ^ C64e(0xa5f497a5c6c632f4) ^ T6[t6[0xF]] ^ T7[t7[0x4]];
+  g[0xA] = T0[t0[0xA]] ^ C64e(0xc6c632f4a5f497a5) ^ C64e(0xa5c6c632f4a5f497) ^ C64e(0x97a5c6c632f4a5f4) ^ C64e(0xf497a5c6c632f4a5) ^ T5[t5[0xF]] ^ T6[t6[0x0]] ^ T7[t7[0x5]];
+  g[0xB] = T0[t0[0xB]] ^ C64e(0xc6c632f4a5f497a5) ^ C64e(0xa5c6c632f4a5f497) ^ C64e(0x97a5c6c632f4a5f4) ^ T4[t4[0xF]] ^ T5[t5[0x0]] ^ T6[t6[0x1]] ^ T7[t7[0x6]];
+  g[0xC] = T0[t0[0xC]] ^ C64e(0xc6c632f4a5f497a5) ^ C64e(0xa5c6c632f4a5f497) ^ T3[t3[0xF]] ^ T4[t4[0x0]] ^ T5[t5[0x1]] ^ T6[t6[0x2]] ^ T7[t7[0x7]];
+  g[0xD] = T0[t0[0xD]] ^ C64e(0xc6c632f4a5f497a5) ^ T2[t2[0xF]] ^ T3[t3[0x0]] ^ T4[t4[0x1]] ^ T5[t5[0x2]] ^ T6[t6[0x3]] ^ T7[t7[0x8]];
+  g[0xE] = T0[t0[0xE]] ^ T1[t1[0xF]] ^ T2[t2[0x0]] ^ T3[t3[0x1]] ^ T4[t4[0x2]] ^ T5[t5[0x3]] ^ T6[t6[0x4]] ^ T7[t7[0x9]];
+  g[0xF] = T0[t0[0xF]] ^ T1[t1[0x0]] ^ T2[t2[0x1]] ^ T3[t3[0x2]] ^ T4[t4[0x3]] ^ T5[t5[0x4]] ^ T6[t6[0x5]] ^ T7[t7[0xA]];
 
-	//#pragma unroll 16
-	for (unsigned int u = 0; u < 16; u ++)
-		H[u] ^= xH[u];
+  PERM_BIG_P(g, 1, 14);
+  PERM_BIG_Q(m);
 
-#undef T0
-#undef T1
-#undef T2
-#undef T3
-#undef T4
-#undef T5
-#undef T6
-#undef T7
+  #pragma unroll
+  for (u = 0; u < 16; u++) g[u] ^= m[u];
+  #pragma unroll
+  for (u = 0; u < 8; u++) m[u] = g[u + 8];
+  g[15] ^= H15;
 
-	//#pragma unroll 8
-	for (unsigned int u = 0; u < 8; u ++)
-		hash->h8[u] = H[u + 8];
+  PERM_BIG_P(g, 0, 14);
+
+  m[7] ^= H15;
+
+  #undef T0
+  #undef T1
+
+  for (u = 0; u < 8; u ++) hash->h8[u] = m[u] ^ g[u + 8];
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
@@ -916,50 +1046,29 @@ __kernel void search3(__global hash_t* hashes)
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
-#if !SPH_SMALL_FOOTPRINT_GROESTL
-  __local sph_u64 T0_C[256], T1_C[256], T2_C[256], T3_C[256];
-  __local sph_u64 T4_C[256], T5_C[256], T6_C[256], T7_C[256];
-#else
-  __local sph_u64 T0_C[256], T4_C[256];
-#endif
+	__local sph_u64 T0_C[256], T1_C[256], T2[256], T3[256];
+	__local sph_u64 T4[256], T5[256], T6[256], T7[256];
+  uint u;
   int init = get_local_id(0);
-  int step = get_local_size(0);
+	int step = get_local_size(0);
 
-  for (int i = init; i < 256; i += step)
-  {
-    T0_C[i] = T0[i];
-    T4_C[i] = T4[i];
-#if !SPH_SMALL_FOOTPRINT_GROESTL
-    T1_C[i] = T1[i];
-    T2_C[i] = T2[i];
-    T3_C[i] = T3[i];
-    T5_C[i] = T5[i];
-    T6_C[i] = T6[i];
-    T7_C[i] = T7[i];
-#endif
-  }
-  barrier(CLK_LOCAL_MEM_FENCE);    // groestl
-#define T0 T0_C
-#define T1 T1_C
-#define T2 T2_C
-#define T3 T3_C
-#define T4 T4_C
-#define T5 T5_C
-#define T6 T6_C
-#define T7 T7_C
+	for (int i = init; i < 256; i += step) {
+    // create other tables based on T0: avoids keeping them in the kernel.
+		T0_C[i] = T0[i];
+		T1_C[i] = T1[i];
+    T2[i] = ROTL64(T0[i], 16UL);
+    T3[i] = ROTL64(T0[i], 24UL);
+    T4[i] = ROTL64(T0[i], 32UL);
+    T5[i] = ROTL64(T0[i], 40UL);
+    T6[i] = ROTL64(T0[i], 48UL);
+    T7[i] = ROTL64(T0[i], 56UL);
+	}
+  barrier(CLK_LOCAL_MEM_FENCE);
+  #define T0 T0_C
+  #define T1 T1_C
 
+  sph_u64 g[16], m[16], t0[16], t1[16], t2[16], t3[16], t4[16], t5[16], t6[16], t7[16];
 
-  sph_u64 H[16];
-//#pragma unroll 15
-  for (unsigned int u = 0; u < 15; u ++)
-    H[u] = 0;
-#if USE_LE
-  H[15] = ((sph_u64)(512 & 0xFF) << 56) | ((sph_u64)(512 & 0xFF00) << 40);
-#else
-  H[15] = (sph_u64)512;
-#endif
-
-  sph_u64 g[16], m[16];
   m[0] = hash->h8[0];
   m[1] = hash->h8[1];
   m[2] = hash->h8[2];
@@ -968,48 +1077,200 @@ __kernel void search3(__global hash_t* hashes)
   m[5] = hash->h8[5];
   m[6] = hash->h8[6];
   m[7] = hash->h8[7];
+  m[8] = 0x80;
+  m[9] = 0;
+  m[10] = 0;
+  m[11] = 0;
+  m[12] = 0;
+  m[13] = 0;
+  m[14] = 0;
+  m[15] = M15;
 
-//#pragma unroll 16
-  for (unsigned int u = 0; u < 16; u ++)
-    g[u] = m[u] ^ H[u];
-  m[8] = 0x80; g[8] = m[8] ^ H[8];
-  m[9] = 0; g[9] = m[9] ^ H[9];
-  m[10] = 0; g[10] = m[10] ^ H[10];
-  m[11] = 0; g[11] = m[11] ^ H[11];
-  m[12] = 0; g[12] = m[12] ^ H[12];
-  m[13] = 0; g[13] = m[13] ^ H[13];
-  m[14] = 0; g[14] = m[14] ^ H[14];
-  m[15] = 0x100000000000000; g[15] = m[15] ^ H[15];
-  PERM_BIG_P(g);
+  #pragma unroll
+  for (u = 0; u < 15; u++) g[u] = m[u];
+  g[15] = M15 ^ H15;
+
+
+  g[0x0] ^= PC64(0x00, 0);
+  g[0x1] ^= PC64(0x10, 0);
+  g[0x2] ^= PC64(0x20, 0);
+  g[0x3] ^= PC64(0x30, 0);
+  g[0x4] ^= PC64(0x40, 0);
+  g[0x5] ^= PC64(0x50, 0);
+  g[0x6] ^= PC64(0x60, 0);
+  g[0x7] ^= PC64(0x70, 0);
+  g[0x8] ^= PC64(0x80, 0);
+  g[0x9] ^= PC64(0x90, 0);
+  g[0xA] ^= PC64(0xA0, 0);
+  g[0xB] = PC64(0xB0, 0);
+  g[0xC] = PC64(0xC0, 0);
+  g[0xD] = PC64(0xD0, 0);
+  g[0xE] = PC64(0xE0, 0);
+  g[0xF] ^= PC64(0xF0, 0);
+  t0[0x0] = B64_0(g[0x0]);
+  t1[0x0] = B64_1(g[0x0]);
+  t2[0x0] = B64_2(g[0x0]);
+  t3[0x0] = B64_3(g[0x0]);
+  t4[0x0] = B64_4(g[0x0]);
+  t5[0x0] = B64_5(g[0x0]);
+  t6[0x0] = B64_6(g[0x0]);
+  t7[0x0] = B64_7(g[0x0]);
+  t0[0x1] = B64_0(g[0x1]);
+  t1[0x1] = B64_1(g[0x1]);
+  t2[0x1] = B64_2(g[0x1]);
+  t3[0x1] = B64_3(g[0x1]);
+  t4[0x1] = B64_4(g[0x1]);
+  t5[0x1] = B64_5(g[0x1]);
+  t6[0x1] = B64_6(g[0x1]);
+  t7[0x1] = B64_7(g[0x1]);
+  t0[0x2] = B64_0(g[0x2]);
+  t1[0x2] = B64_1(g[0x2]);
+  t2[0x2] = B64_2(g[0x2]);
+  t3[0x2] = B64_3(g[0x2]);
+  t4[0x2] = B64_4(g[0x2]);
+  t5[0x2] = B64_5(g[0x2]);
+  t6[0x2] = B64_6(g[0x2]);
+  t7[0x2] = B64_7(g[0x2]);
+  t0[0x3] = B64_0(g[0x3]);
+  t1[0x3] = B64_1(g[0x3]);
+  t2[0x3] = B64_2(g[0x3]);
+  t3[0x3] = B64_3(g[0x3]);
+  t4[0x3] = B64_4(g[0x3]);
+  t5[0x3] = B64_5(g[0x3]);
+  t6[0x3] = B64_6(g[0x3]);
+  t7[0x3] = B64_7(g[0x3]);
+  t0[0x4] = B64_0(g[0x4]);
+  t1[0x4] = B64_1(g[0x4]);
+  t2[0x4] = B64_2(g[0x4]);
+  t3[0x4] = B64_3(g[0x4]);
+  t4[0x4] = B64_4(g[0x4]);
+  t5[0x4] = B64_5(g[0x4]);
+  t6[0x4] = B64_6(g[0x4]);
+  t7[0x4] = B64_7(g[0x4]);
+  t0[0x5] = B64_0(g[0x5]);
+  t1[0x5] = B64_1(g[0x5]);
+  t2[0x5] = B64_2(g[0x5]);
+  t3[0x5] = B64_3(g[0x5]);
+  t4[0x5] = B64_4(g[0x5]);
+  t5[0x5] = B64_5(g[0x5]);
+  t6[0x5] = B64_6(g[0x5]);
+  t7[0x5] = B64_7(g[0x5]);
+  t0[0x6] = B64_0(g[0x6]);
+  t1[0x6] = B64_1(g[0x6]);
+  t2[0x6] = B64_2(g[0x6]);
+  t3[0x6] = B64_3(g[0x6]);
+  t4[0x6] = B64_4(g[0x6]);
+  t5[0x6] = B64_5(g[0x6]);
+  t6[0x6] = B64_6(g[0x6]);
+  t7[0x6] = B64_7(g[0x6]);
+  t0[0x7] = B64_0(g[0x7]);
+  t1[0x7] = B64_1(g[0x7]);
+  t2[0x7] = B64_2(g[0x7]);
+  t3[0x7] = B64_3(g[0x7]);
+  t4[0x7] = B64_4(g[0x7]);
+  t5[0x7] = B64_5(g[0x7]);
+  t6[0x7] = B64_6(g[0x7]);
+  t7[0x7] = B64_7(g[0x7]);
+  t0[0x8] = B64_0(g[0x8]);
+  t1[0x8] = B64_1(g[0x8]);
+  t2[0x8] = B64_2(g[0x8]);
+  t3[0x8] = B64_3(g[0x8]);
+  t4[0x8] = B64_4(g[0x8]);
+  t5[0x8] = B64_5(g[0x8]);
+  t6[0x8] = B64_6(g[0x8]);
+  t7[0x8] = B64_7(g[0x8]);
+  t0[0x9] = B64_0(g[0x9]);
+  t1[0x9] = B64_1(g[0x9]);
+  t2[0x9] = B64_2(g[0x9]);
+  t3[0x9] = B64_3(g[0x9]);
+  t4[0x9] = B64_4(g[0x9]);
+  t5[0x9] = B64_5(g[0x9]);
+  t6[0x9] = B64_6(g[0x9]);
+  t7[0x9] = B64_7(g[0x9]);
+  t0[0xA] = B64_0(g[0xA]);
+  t1[0xA] = B64_1(g[0xA]);
+  t2[0xA] = B64_2(g[0xA]);
+  t3[0xA] = B64_3(g[0xA]);
+  t4[0xA] = B64_4(g[0xA]);
+  t5[0xA] = B64_5(g[0xA]);
+  t6[0xA] = B64_6(g[0xA]);
+  t7[0xA] = B64_7(g[0xA]);
+  t0[0xB] = B64_0(g[0xB]);
+  t1[0xB] = B64_1(g[0xB]);
+  t2[0xB] = B64_2(g[0xB]);
+  t3[0xB] = B64_3(g[0xB]);
+  t4[0xB] = B64_4(g[0xB]);
+  t5[0xB] = B64_5(g[0xB]);
+  t6[0xB] = B64_6(g[0xB]);
+  t7[0xB] = B64_7(g[0xB]);
+  t0[0xC] = B64_0(g[0xC]);
+  t1[0xC] = B64_1(g[0xC]);
+  t2[0xC] = B64_2(g[0xC]);
+  t3[0xC] = B64_3(g[0xC]);
+  t4[0xC] = B64_4(g[0xC]);
+  t5[0xC] = B64_5(g[0xC]);
+  t6[0xC] = B64_6(g[0xC]);
+  t7[0xC] = B64_7(g[0xC]);
+  t0[0xD] = B64_0(g[0xD]);
+  t1[0xD] = B64_1(g[0xD]);
+  t2[0xD] = B64_2(g[0xD]);
+  t3[0xD] = B64_3(g[0xD]);
+  t4[0xD] = B64_4(g[0xD]);
+  t5[0xD] = B64_5(g[0xD]);
+  t6[0xD] = B64_6(g[0xD]);
+  t7[0xD] = B64_7(g[0xD]);
+  t0[0xE] = B64_0(g[0xE]);
+  t1[0xE] = B64_1(g[0xE]);
+  t2[0xE] = B64_2(g[0xE]);
+  t3[0xE] = B64_3(g[0xE]);
+  t4[0xE] = B64_4(g[0xE]);
+  t5[0xE] = B64_5(g[0xE]);
+  t6[0xE] = B64_6(g[0xE]);
+  t7[0xE] = B64_7(g[0xE]);
+  t0[0xF] = B64_0(g[0xF]);
+  t1[0xF] = B64_1(g[0xF]);
+  t2[0xF] = B64_2(g[0xF]);
+  t3[0xF] = B64_3(g[0xF]);
+  t4[0xF] = B64_4(g[0xF]);
+  t5[0xF] = B64_5(g[0xF]);
+  t6[0xF] = B64_6(g[0xF]);
+  t7[0xF] = B64_7(g[0xF]);
+  g[0x0] = T0[t0[0x0]] ^ T1[t1[0x1]] ^ T2[t2[0x2]] ^ T3[t3[0x3]] ^ T4[t4[0x4]] ^ T5[t5[0x5]] ^ T6[t6[0x6]] ^ C64e(0x32f4a5f497a5c6c6);
+  g[0x1] = T0[t0[0x1]] ^ T1[t1[0x2]] ^ T2[t2[0x3]] ^ T3[t3[0x4]] ^ T4[t4[0x5]] ^ T5[t5[0x6]] ^ T6[t6[0x7]] ^ C64e(0x32f4a5f497a5c6c6);
+  g[0x2] = T0[t0[0x2]] ^ T1[t1[0x3]] ^ T2[t2[0x4]] ^ T3[t3[0x5]] ^ T4[t4[0x6]] ^ T5[t5[0x7]] ^ T6[t6[0x8]] ^ C64e(0x32f4a5f497a5c6c6);
+  g[0x3] = T0[t0[0x3]] ^ T1[t1[0x4]] ^ T2[t2[0x5]] ^ T3[t3[0x6]] ^ T4[t4[0x7]] ^ T5[t5[0x8]] ^ T6[t6[0x9]] ^ C64e(0x32f4a5f497a5c6c6);
+  g[0x4] = T0[t0[0x4]] ^ T1[t1[0x5]] ^ T2[t2[0x6]] ^ T3[t3[0x7]] ^ T4[t4[0x8]] ^ T5[t5[0x9]] ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0xF]];
+  g[0x5] = T0[t0[0x5]] ^ T1[t1[0x6]] ^ T2[t2[0x7]] ^ T3[t3[0x8]] ^ T4[t4[0x9]] ^ C64e(0xa5f497a5c6c632f4) ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0x0]];
+  g[0x6] = T0[t0[0x6]] ^ T1[t1[0x7]] ^ T2[t2[0x8]] ^ T3[t3[0x9]] ^ C64e(0xf497a5c6c632f4a5) ^ C64e(0xa5f497a5c6c632f4) ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0x1]];
+  g[0x7] = T0[t0[0x7]] ^ T1[t1[0x8]] ^ T2[t2[0x9]] ^ C64e(0x97a5c6c632f4a5f4) ^ C64e(0xf497a5c6c632f4a5) ^ C64e(0xa5f497a5c6c632f4) ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0x2]];
+  g[0x8] = T0[t0[0x8]] ^ T1[t1[0x9]] ^ C64e(0xa5c6c632f4a5f497) ^ C64e(0x97a5c6c632f4a5f4) ^ C64e(0xf497a5c6c632f4a5) ^ C64e(0xa5f497a5c6c632f4) ^ C64e(0xf4a5f497a5c6c632) ^ T7[t7[0x3]];
+  g[0x9] = T0[t0[0x9]] ^ C64e(0xc6c632f4a5f497a5) ^ C64e(0xa5c6c632f4a5f497) ^ C64e(0x97a5c6c632f4a5f4) ^ C64e(0xf497a5c6c632f4a5) ^ C64e(0xa5f497a5c6c632f4) ^ T6[t6[0xF]] ^ T7[t7[0x4]];
+  g[0xA] = T0[t0[0xA]] ^ C64e(0xc6c632f4a5f497a5) ^ C64e(0xa5c6c632f4a5f497) ^ C64e(0x97a5c6c632f4a5f4) ^ C64e(0xf497a5c6c632f4a5) ^ T5[t5[0xF]] ^ T6[t6[0x0]] ^ T7[t7[0x5]];
+  g[0xB] = T0[t0[0xB]] ^ C64e(0xc6c632f4a5f497a5) ^ C64e(0xa5c6c632f4a5f497) ^ C64e(0x97a5c6c632f4a5f4) ^ T4[t4[0xF]] ^ T5[t5[0x0]] ^ T6[t6[0x1]] ^ T7[t7[0x6]];
+  g[0xC] = T0[t0[0xC]] ^ C64e(0xc6c632f4a5f497a5) ^ C64e(0xa5c6c632f4a5f497) ^ T3[t3[0xF]] ^ T4[t4[0x0]] ^ T5[t5[0x1]] ^ T6[t6[0x2]] ^ T7[t7[0x7]];
+  g[0xD] = T0[t0[0xD]] ^ C64e(0xc6c632f4a5f497a5) ^ T2[t2[0xF]] ^ T3[t3[0x0]] ^ T4[t4[0x1]] ^ T5[t5[0x2]] ^ T6[t6[0x3]] ^ T7[t7[0x8]];
+  g[0xE] = T0[t0[0xE]] ^ T1[t1[0xF]] ^ T2[t2[0x0]] ^ T3[t3[0x1]] ^ T4[t4[0x2]] ^ T5[t5[0x3]] ^ T6[t6[0x4]] ^ T7[t7[0x9]];
+  g[0xF] = T0[t0[0xF]] ^ T1[t1[0x0]] ^ T2[t2[0x1]] ^ T3[t3[0x2]] ^ T4[t4[0x3]] ^ T5[t5[0x4]] ^ T6[t6[0x5]] ^ T7[t7[0xA]];
+
+  PERM_BIG_P(g, 1, 14);
   PERM_BIG_Q(m);
 
-//#pragma unroll 16
-  for (unsigned int u = 0; u < 16; u ++)
-    H[u] ^= g[u] ^ m[u];
-  sph_u64 xH[16];
+  // #pragma unroll
+  for (u = 0; u < 16; u++) g[u] ^= m[u];
+  // #pragma unroll
+  for (u = 0; u < 8; u++) m[u] = g[u + 8];
+  g[15] ^= H15;
 
-//#pragma unroll 16
-  for (unsigned int u = 0; u < 16; u ++)
-    xH[u] = H[u];
-  PERM_BIG_P(xH);
+  PERM_BIG_P(g, 0, 14);
 
-//#pragma unroll 16
-  for (unsigned int u = 0; u < 16; u ++)
-    H[u] ^= xH[u];
+  m[7] ^= H15;
 
-#undef T0
-#undef T1
-#undef T2
-#undef T3
-#undef T4
-#undef T5
-#undef T6
-#undef T7
+  #undef T0
+  #undef T1
 
-//#pragma unroll 8
-  for (unsigned int u = 0; u < 8; u ++)
-    hash->h8[u] = H[u + 8];
-    barrier(CLK_GLOBAL_MEM_FENCE);
+  //#pragma unroll 8
+  for (u = 0; u < 8; u ++) hash->h8[u] = m[u] ^ g[u + 8];
+  barrier(CLK_GLOBAL_MEM_FENCE);
 
 }
 
