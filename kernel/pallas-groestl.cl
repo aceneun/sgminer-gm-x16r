@@ -41,14 +41,26 @@
                     | ((DC64(x) << 40) & DC64(0x00FF000000000000)) \
                     | ((DC64(x) << 56)))
 
-#define B64_0(x)    ((x) & 0xFF)
-#define B64_1(x)    (((x) >> 8) & 0xFF)
-#define B64_2(x)    (((x) >> 16) & 0xFF)
-#define B64_3(x)    (((x) >> 24) & 0xFF)
-#define B64_4(x)    (((x) >> 32) & 0xFF)
-#define B64_5(x)    (((x) >> 40) & 0xFF)
-#define B64_6(x)    (((x) >> 48) & 0xFF)
-#define B64_7(x)    ((x) >> 56)
+#ifdef NO_AMD_OPS
+	#define B64_0(x)    ((x) & 0xFF)
+	#define B64_1(x)    (((x) >> 8) & 0xFF)
+	#define B64_2(x)    (((x) >> 16) & 0xFF)
+	#define B64_3(x)    (((x) >> 24) & 0xFF)
+	#define B64_4(x)    (((x) >> 32) & 0xFF)
+	#define B64_5(x)    (((x) >> 40) & 0xFF)
+	#define B64_6(x)    (((x) >> 48) & 0xFF)
+	#define B64_7(x)    ((x) >> 56)
+#else
+	#pragma OPENCL EXTENSION cl_amd_media_ops2 : enable
+	#define B64_0(x)    ((uchar)(x))
+	#define B64_1(x)    (amd_bfe((uint)(x), 8U, 8U))
+	#define B64_2(x)    (amd_bfe((uint)(x), 16U, 8U))
+	#define B64_3(x)    (amd_bfe((uint)(x), 24U, 8U))
+	#define B64_4(x)    ((uchar)((x) >> 32U))
+	#define B64_5(x)    (amd_bfe((uint)((x) >> 32U),  8U, 8U))
+	#define B64_6(x)    (amd_bfe((uint)((x) >> 32U), 16U, 8U))
+	#define B64_7(x)    (amd_bfe((uint)((x) >> 32U), 24U, 8U))
+#endif
 #define PC64(j, r)  ((ulong)((j) + (r)))
 #define QC64(j, r)  (((ulong)(r) << 56) ^ ~((ulong)(j) << 56))
 
