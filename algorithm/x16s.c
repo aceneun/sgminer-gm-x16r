@@ -118,9 +118,8 @@ void x16s_hash(void *state, const void *input)
   int size = 80;
   uint8_t hashOrder[X16S_HASH_FUNC_COUNT];
 
-  uint32_t *in32 = (uint32_t*) input;
   if (opt_benchmark) {
-    for (uint i = 0; i < X16S_HASH_FUNC_COUNT; i++)
+    for (uint8_t i = 0; i < X16S_HASH_FUNC_COUNT; i++)
       hashOrder[i] = opt_benchmark_seq[i];
   }
   else x16s_getalgolist((uint8_t*)input + 4, hashOrder);

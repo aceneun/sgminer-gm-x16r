@@ -77,8 +77,7 @@ const char* X16R_ALGO_NAMES[X16R_HASH_FUNC_COUNT] = {
   "fugue",
   "shabal",
   "whirlpool",
-  "sha512",
-  NULL
+  "sha512"
 };
 
 /*
@@ -118,9 +117,8 @@ void x16r_hash(void *state, const void *input)
   int size = 80;
   uint8_t hashOrder[X16R_HASH_FUNC_COUNT];
 
-  uint32_t *in32 = (uint32_t*) input;
   if (opt_benchmark) {
-    for (uint i = 0; i < X16R_HASH_FUNC_COUNT; i++)
+    for (uint8_t i = 0; i < X16R_HASH_FUNC_COUNT; i++)
       hashOrder[i] = opt_benchmark_seq[i];
   }
   else x16r_getalgolist((uint8_t*)input + 4, hashOrder);
