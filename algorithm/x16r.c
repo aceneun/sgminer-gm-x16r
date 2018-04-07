@@ -119,7 +119,11 @@ void x16r_hash(void *state, const void *input)
   uint8_t hashOrder[X16R_HASH_FUNC_COUNT];
 
   uint32_t *in32 = (uint32_t*) input;
-  x16r_getalgolist((uint8_t*)input + 4, hashOrder);
+  if (opt_benchmark) {
+    for (uint i = 0; i < X16R_HASH_FUNC_COUNT; i++)
+      hashOrder[i] = opt_benchmark_seq[i];
+  }
+  else x16r_getalgolist((uint8_t*)input + 4, hashOrder);
 
   for (int i = 0; i < X16R_HASH_FUNC_COUNT; i++)
   {
