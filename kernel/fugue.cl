@@ -5,7 +5,7 @@
  * ==========================(LICENSE BEGIN)============================
  *
  * Copyright (c) 2007-2010  Projet RNRT SAPHIR
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -13,10 +13,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -29,6 +29,18 @@
  *
  * @author   Thomas Pornin <thomas.pornin@cryptolog.com>
  */
+
+#ifdef NO_AMD_OPS
+	#define BYTE0(x)	((uchar)(x))
+	#define BYTE1(x)	((uchar)(x >> 8))
+	#define BYTE2(x)	((uchar)(x >> 16))
+	#define BYTE3(x)	((uchar)(x >> 24))
+#else
+	#define BYTE0(x)	(amd_bfe((x), 0U, 8U))
+	#define BYTE1(x)	(amd_bfe((x), 8U, 8U))
+	#define BYTE2(x)	(amd_bfe((x), 16U, 8U))
+	#define BYTE3(x)	(amd_bfe((x), 24U, 8U))
+#endif
 
 __constant const sph_u32 IV224[] = {
   SPH_C32(0xf4c9120d), SPH_C32(0x6286f757), SPH_C32(0xee39e01c),
@@ -466,49 +478,49 @@ __constant const sph_u32 mixtab3_c[] = {
     sph_u32 r2 = 0; \
     sph_u32 r3 = 0; \
     sph_u32 tmp; \
-    tmp = mixtab0[x0 >> 24]; \
+    tmp = mixtab0[BYTE3(x0)]; \
     c0 ^= tmp; \
-    tmp = mixtab1[(x0 >> 16) & 0xFF]; \
+    tmp = mixtab1[BYTE2(x0)]; \
     c0 ^= tmp; \
     r1 ^= tmp; \
-    tmp = mixtab2[(x0 >>  8) & 0xFF]; \
+    tmp = mixtab2[BYTE1(x0)]; \
     c0 ^= tmp; \
     r2 ^= tmp; \
-    tmp = mixtab3[x0 & 0xFF]; \
+    tmp = mixtab3[BYTE0(x0)]; \
     c0 ^= tmp; \
     r3 ^= tmp; \
-    tmp = mixtab0[x1 >> 24]; \
+    tmp = mixtab0[BYTE3(x1)]; \
     c1 ^= tmp; \
     r0 ^= tmp; \
-    tmp = mixtab1[(x1 >> 16) & 0xFF]; \
+    tmp = mixtab1[BYTE2(x1)]; \
     c1 ^= tmp; \
-    tmp = mixtab2[(x1 >>  8) & 0xFF]; \
+    tmp = mixtab2[BYTE1(x1)]; \
     c1 ^= tmp; \
     r2 ^= tmp; \
-    tmp = mixtab3[x1 & 0xFF]; \
+    tmp = mixtab3[BYTE0(x1)]; \
     c1 ^= tmp; \
     r3 ^= tmp; \
-    tmp = mixtab0[x2 >> 24]; \
+    tmp = mixtab0[BYTE3(x2)]; \
     c2 ^= tmp; \
     r0 ^= tmp; \
-    tmp = mixtab1[(x2 >> 16) & 0xFF]; \
+    tmp = mixtab1[BYTE2(x2)]; \
     c2 ^= tmp; \
     r1 ^= tmp; \
-    tmp = mixtab2[(x2 >>  8) & 0xFF]; \
+    tmp = mixtab2[BYTE1(x2)]; \
     c2 ^= tmp; \
-    tmp = mixtab3[x2 & 0xFF]; \
+    tmp = mixtab3[BYTE0(x2)]; \
     c2 ^= tmp; \
     r3 ^= tmp; \
-    tmp = mixtab0[x3 >> 24]; \
+    tmp = mixtab0[BYTE3(x3)]; \
     c3 ^= tmp; \
     r0 ^= tmp; \
-    tmp = mixtab1[(x3 >> 16) & 0xFF]; \
+    tmp = mixtab1[BYTE2(x3)]; \
     c3 ^= tmp; \
     r1 ^= tmp; \
-    tmp = mixtab2[(x3 >>  8) & 0xFF]; \
+    tmp = mixtab2[BYTE1(x3)]; \
     c3 ^= tmp; \
     r2 ^= tmp; \
-    tmp = mixtab3[x3 & 0xFF]; \
+    tmp = mixtab3[BYTE0(x3)]; \
     c3 ^= tmp; \
     x0 = ((c0 ^ r0) & SPH_C32(0xFF000000)) \
       | ((c1 ^ r1) & SPH_C32(0x00FF0000)) \
@@ -682,6 +694,3 @@ __constant const sph_u32 mixtab3_c[] = {
 	CMIX36(S24, S25, S26, S28, S29, S30, S06, S07, S08); \
 	SMIX(S24, S25, S26, S27); \
 } while (0)
-
-
-
