@@ -2068,13 +2068,8 @@ __kernel void search26(__global uint* block, __global hash_t* hashes)
 	FFT256(0, 1, 0, ll1);
 	for (int i = 0; i < 256; i ++)
 	{
-		s32 tq;
-
-		tq = q[i] + yoff_b_n[i];
-		tq = REDS2(tq);
-		tq = REDS1(tq);
-		tq = REDS1(tq);
-		q[i] = (tq <= 128 ? tq : tq - 257);
+		const s32 tq = REDS1(REDS1(q[i] + yoff_b_n[i]));
+		q[i] = select(tq - 257, tq, tq <= 128);
 	}
 
 	A0 ^= block[0];
@@ -2202,13 +2197,8 @@ __kernel void search10(__global hash_t* hashes)
   FFT256(0, 1, 0, ll1);
   for (int i = 0; i < 256; i ++)
   {
-    s32 tq;
-
-    tq = q[i] + yoff_b_n[i];
-    tq = REDS2(tq);
-    tq = REDS1(tq);
-    tq = REDS1(tq);
-    q[i] = (tq <= 128 ? tq : tq - 257);
+    const s32 tq = REDS1(REDS1(q[i] + yoff_b_n[i]));
+    q[i] = select(tq - 257, tq, tq <= 128);
   }
 
   A0 ^= hash->h4[0];
