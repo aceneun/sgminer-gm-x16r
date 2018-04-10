@@ -2051,6 +2051,16 @@ __kernel void search26(__global uint* block, __global hash_t* hashes)
 	uint gid = get_global_id(0);
 	__global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
+	__local sph_s32 yoff[256];
+
+	int init = get_local_id(0);
+	int step = get_local_size(0);
+
+	for (int i = init; i < 256; i += step)
+		yoff[i] = yoff_b_n[i];
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	// simd
 	s32 q[256];
 	unsigned char x[128];
@@ -2068,7 +2078,7 @@ __kernel void search26(__global uint* block, __global hash_t* hashes)
 	FFT256(0, 1, 0, ll1);
 	for (int i = 0; i < 256; i ++)
 	{
-		const s32 tq = REDS1(REDS1(q[i] + yoff_b_n[i]));
+		const s32 tq = REDS1(REDS1(q[i] + yoff[i]));
 		q[i] = select(tq - 257, tq, tq <= 128);
 	}
 
@@ -2181,6 +2191,16 @@ __kernel void search10(__global hash_t* hashes)
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
+  __local sph_s32 yoff[256];
+
+  int init = get_local_id(0);
+  int step = get_local_size(0);
+
+  for (int i = init; i < 256; i += step)
+	  yoff[i] = yoff_b_n[i];
+
+  barrier(CLK_LOCAL_MEM_FENCE);
+
   // simd
   s32 q[256];
   unsigned char x[128];
@@ -2197,7 +2217,7 @@ __kernel void search10(__global hash_t* hashes)
   FFT256(0, 1, 0, ll1);
   for (int i = 0; i < 256; i ++)
   {
-    const s32 tq = REDS1(REDS1(q[i] + yoff_b_n[i]));
+    const s32 tq = REDS1(REDS1(q[i] + yoff[i]));
     q[i] = select(tq - 257, tq, tq <= 128);
   }
 
