@@ -2248,14 +2248,12 @@ __kernel void search10(__global hash_t* hashes)
   u32 COPY_C0 = C0, COPY_C1 = C1, COPY_C2 = C2, COPY_C3 = C3, COPY_C4 = C4, COPY_C5 = C5, COPY_C6 = C6, COPY_C7 = C7;
   u32 COPY_D0 = D0, COPY_D1 = D1, COPY_D2 = D2, COPY_D3 = D3, COPY_D4 = D4, COPY_D5 = D5, COPY_D6 = D6, COPY_D7 = D7;
 
-  #define q SIMD_Q
-
   A0 ^= 0x200;
 
-  ONE_ROUND_BIG(0_, 0,  3, 23, 17, 27);
-  ONE_ROUND_BIG(1_, 1, 28, 19, 22,  7);
-  ONE_ROUND_BIG(2_, 2, 29,  9, 15,  5);
-  ONE_ROUND_BIG(3_, 3,  4, 13, 10, 25);
+  ONE_ROUND_BIG_PRECOMP(0_, 0,  3, 23, 17, 27);
+  ONE_ROUND_BIG_PRECOMP(1_, 1, 28, 19, 22,  7);
+  ONE_ROUND_BIG_PRECOMP(2_, 2, 29,  9, 15,  5);
+  ONE_ROUND_BIG_PRECOMP(3_, 3,  4, 13, 10, 25);
 
   STEP_BIG(
     COPY_A0, COPY_A1, COPY_A2, COPY_A3,
@@ -2276,8 +2274,6 @@ __kernel void search10(__global hash_t* hashes)
     COPY_D0, COPY_D1, COPY_D2, COPY_D3,
     COPY_D4, COPY_D5, COPY_D6, COPY_D7,
     IF, 25,  4, PP8_0_);
-
-  #undef q
 
   hash->h4[0] = A0;
   hash->h4[1] = A1;
