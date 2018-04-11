@@ -5,6 +5,7 @@
  *
  * Copyright (c) 2014  phm
  * Copyright (c) 2014 Girino Vey
+ * Copyright (c) 2018 brianmct (optimizations)
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -76,7 +77,7 @@ typedef int sph_s32;
 #define SPH_KECCAK_NOCOPY 0
 #define SPH_SMALL_FOOTPRINT_GROESTL 0
 #define SPH_GROESTL_BIG_ENDIAN 0
-#define SPH_CUBEHASH_UNROLL 0
+#define SPH_CUBEHASH_UNROLL 2
 
 #ifndef SPH_COMPACT_BLAKE_64
   #define SPH_COMPACT_BLAKE_64 0
@@ -2979,7 +2980,7 @@ __kernel void search31(__global ulong* block, __global hash_t* hashes)
 
     h0 = h1 = h2 = h3 = h4 = h5 = h6 = h7 = 0;
 
-#pragma unroll 10
+    #pragma unroll 10
     for (unsigned r = 0; r < 10; r ++)
     {
         sph_u64 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
