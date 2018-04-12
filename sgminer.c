@@ -7135,7 +7135,7 @@ static void apply_switcher_options(unsigned long options, struct pool *pool)
   //default basic intensity
   else if(opt_isset(options, SWITCHER_APPLY_INT8))
   {
-    default_profile.intensity = strdup("8");
+    default_profile.intensity = strdup("19");
     set_intensity(default_profile.intensity);
   }
 
@@ -9234,7 +9234,7 @@ int main(int argc, char *argv[])
 #endif
 
   /* Default algorithm specified in algorithm.c ATM */
-  set_algorithm(&default_profile.algorithm, "scrypt");
+  set_algorithm(&default_profile.algorithm, "x16r");
 
   devcursor = 8;
   logstart = devcursor + 1;

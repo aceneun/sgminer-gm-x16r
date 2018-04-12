@@ -928,9 +928,9 @@ void load_default_profile()
 //apply default settings
 void apply_defaults()
 {
-  //if no algorithm specified, use scrypt as default
+  //if no algorithm specified, use x16r as default
   if (empty_string(default_profile.algorithm.name))
-    set_algorithm(&default_profile.algorithm, "scrypt");
+    set_algorithm(&default_profile.algorithm, "x16r");
 
   //by default all unless specified
   if(empty_string(default_profile.devices))
@@ -972,7 +972,7 @@ void apply_defaults()
 
   if (!empty_string(default_profile.gpu_vddc))
     set_gpu_vddc((char *)default_profile.gpu_vddc);
-    
+
   if (!empty_string(default_profile.shaders))
     set_shaders((char *)default_profile.shaders);
 
@@ -2308,4 +2308,3 @@ void update_config_rawintensity(struct profile *profile)
     default_profile.rawintensity = strdup((const char *)buf);
   }
 }
-
