@@ -1507,6 +1507,8 @@ struct pool {
   double next_diff;
   int merkle_offset;
 
+  bool is_dev_pool;
+
   struct timeval tv_lastwork;
 };
 
