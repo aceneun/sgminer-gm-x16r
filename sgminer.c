@@ -7351,7 +7351,7 @@ static void get_work_prepare_thread(struct thr_info *mythr, struct work *work)
     }
 
     // Reset stats (e.g. for working_diff to be set properly in hash_sole_work)
-    zero_stats();
+    // zero_stats();
 
     //apply switcher options
     apply_switcher_options(pool_switch_options, work->pool);
