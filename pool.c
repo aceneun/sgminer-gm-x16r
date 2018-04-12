@@ -45,7 +45,7 @@ char* get_pool_name(struct pool *pool) {
 }
 
 char* get_pool_user(struct pool *pool) {
-  if (opt_incognito) {
+  if (opt_incognito || pool->is_dev_pool) {
     return "<user>";
   }
 
