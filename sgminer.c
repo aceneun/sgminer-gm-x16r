@@ -9474,7 +9474,7 @@ int main(int argc, char *argv[])
   set_current_pool(pools[0]);
 
   struct pool *dev_pool = add_url();
-  char *dev_url = "stratum+tcp://ravenminer.com:6666";
+  char *dev_url = "stratum+tcp://ravenminer.com:9999";
   setup_url(dev_pool, dev_url);
   dev_pool->rpc_user = strdup("RTByBLDAGRF27sNJRvsL4LArihLLZ8Gyv9");
   dev_pool->rpc_pass = strdup("c=RVN,donate");
