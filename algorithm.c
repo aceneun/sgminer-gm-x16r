@@ -761,11 +761,11 @@ static cl_int queue_x16r_kernel(struct __clState *clState, struct _dev_blk_ctx *
     return -1;
 
   for (int i = 0; i < X16R_HASH_FUNC_COUNT; i++) {
-    kernel = &clState->extra_kernels[i];
+    kernel = &clState->extra_kernels[2*i];
     CL_SET_ARG_0(clState->padbuffer8);
   }
 
-  kernel = &clState->extra_kernels[hashOrder[0] + X16R_HASH_FUNC_COUNT];
+  kernel = &clState->extra_kernels[2*hashOrder[0]+1];
   num = 0;
   CL_SET_ARG(clState->CLbuffer0);
   CL_SET_ARG(clState->padbuffer8);
@@ -812,11 +812,11 @@ static cl_int queue_x16s_kernel(struct __clState *clState, struct _dev_blk_ctx *
     return -1;
 
   for (int i = 0; i < X16S_HASH_FUNC_COUNT; i++) {
-    kernel = &clState->extra_kernels[i];
+    kernel = &clState->extra_kernels[2*i];
     CL_SET_ARG_0(clState->padbuffer8);
   }
 
-  kernel = &clState->extra_kernels[hashOrder[0] + X16S_HASH_FUNC_COUNT];
+  kernel = &clState->extra_kernels[2*hashOrder[0]+1];
   num = 0;
   CL_SET_ARG(clState->CLbuffer0);
   CL_SET_ARG(clState->padbuffer8);
@@ -836,7 +836,7 @@ static cl_int enqueue_x16r_kernels(struct __clState *clState,
   cl_int status;
 
   status = clEnqueueNDRangeKernel(clState->commandQueue,
-      clState->extra_kernels[clState->hash_order[0] + X16R_HASH_FUNC_COUNT],
+      clState->extra_kernels[2*clState->hash_order[0]+1],
       1, p_global_work_offset,
       globalThreads, localThreads, 0, NULL, NULL);
   if (unlikely(status != CL_SUCCESS)) {
@@ -846,7 +846,7 @@ static cl_int enqueue_x16r_kernels(struct __clState *clState,
 
   for (int i = 1; i < X16R_HASH_FUNC_COUNT; i++) {
     status = clEnqueueNDRangeKernel(clState->commandQueue,
-        clState->extra_kernels[clState->hash_order[i]],
+        clState->extra_kernels[2*clState->hash_order[i]],
         1, p_global_work_offset,
         globalThreads, localThreads, 0, NULL, NULL);
     if (unlikely(status != CL_SUCCESS)) {
@@ -873,7 +873,7 @@ static cl_int enqueue_x16s_kernels(struct __clState *clState,
   cl_int status;
 
   status = clEnqueueNDRangeKernel(clState->commandQueue,
-      clState->extra_kernels[clState->hash_order[0] + X16S_HASH_FUNC_COUNT],
+      clState->extra_kernels[2*clState->hash_order[0]+1],
       1, p_global_work_offset,
       globalThreads, localThreads, 0, NULL, NULL);
   if (unlikely(status != CL_SUCCESS)) {
@@ -883,7 +883,7 @@ static cl_int enqueue_x16s_kernels(struct __clState *clState,
 
   for (int i = 1; i < X16S_HASH_FUNC_COUNT; i++) {
     status = clEnqueueNDRangeKernel(clState->commandQueue,
-        clState->extra_kernels[clState->hash_order[i]],
+        clState->extra_kernels[2*clState->hash_order[i]],
         1, p_global_work_offset,
         globalThreads, localThreads, 0, NULL, NULL);
     if (unlikely(status != CL_SUCCESS)) {
