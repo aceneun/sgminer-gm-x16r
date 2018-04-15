@@ -1,4 +1,4 @@
-AC_INIT([avermore], [1.0.0], [], [avermore], [https://github.com/brian112358/avermore-miner])
+AC_INIT([avermore], [1.1.0], [], [avermore], [https://github.com/brian112358/avermore-miner])
 
 AC_PREREQ(2.59)
 AC_CANONICAL_SYSTEM
