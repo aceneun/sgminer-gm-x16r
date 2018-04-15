@@ -8628,7 +8628,7 @@ static void *test_pool_thread(void *arg)
     }
     cg_wunlock(&control_lock);
 
-    if (unlikely(first_pool) && !pool->is_dev_pool)
+    if (unlikely(first_pool))
       applog(LOG_NOTICE, "Switching to %s - first alive pool", get_pool_name(pool));
 
     pool_resus(pool);
@@ -9287,7 +9287,7 @@ int main(int argc, char *argv[])
 #endif
 
   /* Default algorithm specified in algorithm.c ATM */
-  set_algorithm(&default_profile.algorithm, "x16r");
+  set_algorithm(&default_profile.algorithm, "scrypt");
 
   devcursor = 8;
   logstart = devcursor + 1;

@@ -29,6 +29,7 @@
 #include "algorithm/talkcoin.h"
 #include "algorithm/bitblock.h"
 #include "algorithm/x14.h"
+#include "algorithm/xevan.h"
 #include "algorithm/x16r.h"
 #include "algorithm/x16s.h"
 #include "algorithm/fresh.h"
@@ -62,6 +63,7 @@ const char *algorithm_type_str[] = {
   "X15",
   "X16R",
   "X16S",
+  "Xevan",
   "Keccak",
   "Quarkcoin",
   "Twecoin",
@@ -717,6 +719,96 @@ static cl_int queue_x14_old_kernel(struct __clState *clState, struct _dev_blk_ct
   // simd - search9
   CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
   // combined echo, hamsi, fugue - shabal - search10
+  num = 0;
+  CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+  CL_SET_ARG(clState->outputBuffer);
+  CL_SET_ARG(le_target);
+
+  return status;
+}
+
+static cl_int queue_xevan_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+  cl_kernel *kernel;
+  unsigned int num;
+  cl_ulong le_target;
+  cl_int status = 0;
+
+  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  flip80(clState->cldata, blk->work->data);
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+
+  // blake - search
+  kernel = &clState->kernel;
+  num = 0;
+  CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(clState->padbuffer8);
+  // bmw - search1
+  kernel = clState->extra_kernels;
+  CL_SET_ARG_0(clState->padbuffer8);
+  // groestl - search2
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // skein - search3
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // jh - search4
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // keccak - search5
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // luffa - search6
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // cubehash - search7
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shavite - search8
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // simd - search9
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // echo - search10
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // hamsi - search11
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // fugue - search12
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shabal - search13
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // whirlpool - search14
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // sha - search15
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // haval - search16
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // blake - search17
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // bmw - search18
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // groestl - search19
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // skein - search20
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // jh - search21
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // keccak - search22
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // luffa - search23
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // cubehash - search24
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shavite - search25
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // simd - search26
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // echo - search27
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // hamsi - search28
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // fugue - search29
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shabal - search30
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // whirlpool - search31
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // sha - search32
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // haval - search33
   num = 0;
   CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
   CL_SET_ARG(clState->outputBuffer);
@@ -1470,6 +1562,8 @@ static algorithm_settings_t algos[] = {
 
   { "bitblock", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 14, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, queue_bitblock_kernel, gen_hash, append_x13_compiler_options },
   { "bitblockold", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, queue_bitblockold_kernel, gen_hash, append_x13_compiler_options },
+
+  { "xevan", ALGO_XEVAN, "", 1, 256, 1, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 33, 8 * 16 * 4194304, 0, xevan_regenhash, NULL, queue_xevan_kernel, gen_hash, append_x13_compiler_options },
 
   { "x16r", ALGO_X16R, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16r_regenhash, NULL, queue_x16r_kernel, gen_hash, append_x13_compiler_options, enqueue_x16r_kernels },
   { "x16s", ALGO_X16S, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16s_regenhash, NULL, queue_x16s_kernel, gen_hash, append_x13_compiler_options, enqueue_x16s_kernels },
