@@ -96,6 +96,7 @@ typedef int sph_s32;
 #include "jh.cl"
 #include "keccak.cl"
 #include "skein.cl"
+#include "wolf-skein.cl"
 #include "luffa.cl"
 #include "cubehash.cl"
 #include "shavite.cl"
@@ -1467,38 +1468,28 @@ __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search11(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
-  __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-
-  sph_u64 h0 = SPH_C64(0x4903ADFF749C51CE), h1 = SPH_C64(0x0D95DE399746DF03), h2 = SPH_C64(0x8FD1934127C79BCE), h3 = SPH_C64(0x9A255629FF352CB1), h4 = SPH_C64(0x5DB62599DF6CA7B0), h5 = SPH_C64(0xEABE394CA9D5C3F4), h6 = SPH_C64(0x991112C71A75B523), h7 = SPH_C64(0xAE18A40B660FCC33);
-  sph_u64 m0, m1, m2, m3, m4, m5, m6, m7;
-  sph_u64 bcount = 0;
-
-  m0 = hash->h8[0];
-  m1 = hash->h8[1];
-  m2 = hash->h8[2];
-  m3 = hash->h8[3];
-  m4 = hash->h8[4];
-  m5 = hash->h8[5];
-  m6 = hash->h8[6];
-  m7 = hash->h8[7];
-
-  UBI_BIG(480, 64);
-
-  bcount = 0;
-  m0 = m1 = m2 = m3 = m4 = m5 = m6 = m7 = 0;
-
-  UBI_BIG(510, 8);
-
-  hash->h8[0] = h0;
-  hash->h8[1] = h1;
-  hash->h8[2] = h2;
-  hash->h8[3] = h3;
-  hash->h8[4] = h4;
-  hash->h8[5] = h5;
-  hash->h8[6] = h6;
-  hash->h8[7] = h7;
-
-  barrier(CLK_GLOBAL_MEM_FENCE);
+    uint offset = get_global_offset(0);
+    __global hash_t *hash = &(hashes[gid-offset]);
+	
+	const ulong8 m = vload8(0, hash->h8);
+	
+	const ulong8 h = (ulong8)(	0x4903ADFF749C51CEUL, 0x0D95DE399746DF03UL, 0x8FD1934127C79BCEUL, 0x9A255629FF352CB1UL,
+								0x5DB62599DF6CA7B0UL, 0xEABE394CA9D5C3F4UL, 0x991112C71A75B523UL, 0xAE18A40B660FCC33UL);
+	
+	const ulong t[3] = { 0x40UL, 0xF000000000000000UL, 0xF000000000000040UL }, t2[3] = { 0x08UL, 0xFF00000000000000UL, 0xFF00000000000008UL };
+		
+	ulong8 p = Skein512Block(m, h, 0xCAB2076D98173EC4UL, t);
+	
+	const ulong8 h2 = m ^ p;
+	p = (ulong8)(0);
+	ulong h8 = h2.s0 ^ h2.s1 ^ h2.s2 ^ h2.s3 ^ h2.s4 ^ h2.s5 ^ h2.s6 ^ h2.s7 ^ 0x1BD11BDAA9FC1A22UL;
+	
+	p = Skein512Block(p, h2, h8, t2);
+	//p = VSWAP8(p);
+	
+	vstore8(p, 0, hash->h8);
+	
+	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 // skein80
