@@ -774,7 +774,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 
   // Load program from file or build it if it doesn't exist
   if (!(clState->program = load_opencl_binary_kernel(build_data))) {
-    applog(LOG_NOTICE, "Building binary %s", build_data->binary_filename);
+    applog(LOG_WARNING, "Building binary %s for the first time.\nThis may take several minutes.", build_data->binary_filename);
 
     if (!(clState->program = build_opencl_kernel(build_data, filename))) {
       return NULL;
@@ -826,7 +826,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
     snprintf(buffer, sizeof(buffer), "buffer2");
     if (status != CL_SUCCESS)
       goto out;
-    clState->buffer3 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, RC_SIZE, NULL, &status); 
+    clState->buffer3 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, RC_SIZE, NULL, &status);
     snprintf(buffer, sizeof(buffer), "buffer3");
     if (status != CL_SUCCESS)
       goto out;
@@ -894,7 +894,7 @@ out:
       applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
       return NULL;
     }
-  
+
     clState->n_extra_kernels = algorithm->n_extra_kernels;
     if (clState->n_extra_kernels > 0) {
       unsigned int i;
@@ -912,7 +912,7 @@ out:
       }
     }
   }
-    
+
 
   if (algorithm->type == ALGO_ETHASH) {
     clState->GenerateDAG = clCreateKernel(clState->program, "GenerateDAG", &status);
@@ -1059,7 +1059,7 @@ out:
       return NULL;
     }
   }
-  
+
   if (algorithm->type == ALGO_CRYPTONIGHT) {
     size_t GlobalThreads;
     readbufsize = 128UL;
@@ -1089,7 +1089,7 @@ out:
       return NULL;
     }
   }
-  
+
   applog(LOG_DEBUG, "Using read buffer sized %lu", (unsigned long)readbufsize);
   clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, readbufsize, NULL, &status);
   if (status != CL_SUCCESS) {
@@ -1109,4 +1109,3 @@ out:
 
   return clState;
 }
-
