@@ -1563,7 +1563,7 @@ static algorithm_settings_t algos[] = {
   { "bitblock", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 14, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, queue_bitblock_kernel, gen_hash, append_x13_compiler_options },
   { "bitblockold", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, queue_bitblockold_kernel, gen_hash, append_x13_compiler_options },
 
-  { "xevan", ALGO_XEVAN, "", 1, 256, 1, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 33, 8 * 16 * 4194304, 0, xevan_regenhash, NULL, queue_xevan_kernel, gen_hash, append_x13_compiler_options },
+  { "xevan", ALGO_XEVAN, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 33, 8 * 16 * 4194304, 0, xevan_regenhash, NULL, queue_xevan_kernel, gen_hash, append_x13_compiler_options },
 
   { "x16r", ALGO_X16R, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16r_regenhash, NULL, queue_x16r_kernel, gen_hash, append_x13_compiler_options, enqueue_x16r_kernels },
   { "x16s", ALGO_X16S, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16s_regenhash, NULL, queue_x16s_kernel, gen_hash, append_x13_compiler_options, enqueue_x16s_kernels },
