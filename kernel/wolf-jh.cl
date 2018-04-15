@@ -3,7 +3,7 @@
 
 // JH implementation helper functions and macros by Wolf
 
-static const __constant ulong C[] =
+static const __constant ulong C_new[] =
 {
 	0x67F815DFA2DED572UL, 0x571523B70A15847BUL, 0xF6875A4D90D6AB81UL, 0x402BD1C3C54F9F4EUL, 
 	0x9CFA455CE03A98EAUL, 0x9A99B26699D2C503UL, 0x8A53BBF2B4960266UL, 0x31A2DB881A1456B5UL, 
@@ -56,7 +56,7 @@ static const __constant ulong C[] =
 #define JH_BASE_TYPE_CAST(x)	as_ulong(x)
 #define JH_CHUNK_TYPE_CAST(x)	as_ulong4(x)
 
-void Lb(JH_CHUNK_TYPE *lo, JH_CHUNK_TYPE *hi)
+void Lb_new(JH_CHUNK_TYPE *lo, JH_CHUNK_TYPE *hi)
 {	
 	*hi ^= shuffle(*lo, (JH_CHUNK_TYPE)(1, 2, 3, 0));
 	(*hi).s2 ^= (*lo).s0;
@@ -89,7 +89,7 @@ void JH_RND(JH_CHUNK_TYPE *xh, JH_CHUNK_TYPE *xl, uchar rnd)
 #define JH_BASE_TYPE_CAST(x)	as_uint2(x)
 #define JH_CHUNK_TYPE_CAST(x)	as_uint8(x)
 
-void Lb(JH_CHUNK_TYPE *lo, JH_CHUNK_TYPE *hi)
+void Lb_new(JH_CHUNK_TYPE *lo, JH_CHUNK_TYPE *hi)
 {	
 	*hi ^= shuffle(*lo, (JH_CHUNK_TYPE)(2, 3, 4, 5, 6, 7, 0, 1));
 	(*hi).hi.lo ^= (*lo).lo.lo;
@@ -132,7 +132,7 @@ void JH_RND(JH_CHUNK_TYPE *xh, JH_CHUNK_TYPE *xl, uchar rnd)
 #define JH_BASE_TYPE_CAST(x)	as_ushort4(x)
 #define JH_CHUNK_TYPE_CAST(x)	as_ushort16(x)
 
-void Lb(JH_CHUNK_TYPE *lo, JH_CHUNK_TYPE *hi)
+void Lb_new(JH_CHUNK_TYPE *lo, JH_CHUNK_TYPE *hi)
 {	
 	*hi ^= shuffle(*lo, (JH_CHUNK_TYPE)(4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3));
 	(*hi).s89ab ^= (*lo).s0123;
@@ -171,7 +171,7 @@ void JH_RND(JH_CHUNK_TYPE *xh, JH_CHUNK_TYPE *xl, uchar rnd)
 
 #ifdef WOLF_JH_64BIT
 
-JH_CHUNK_TYPE Sb(JH_CHUNK_TYPE x, JH_BASE_TYPE c)
+JH_CHUNK_TYPE Sb_new(JH_CHUNK_TYPE x, JH_BASE_TYPE c)
 {
 	x.s3 = ~x.s3;
 	x.s0 ^= c & ~x.s2;
@@ -189,7 +189,7 @@ JH_CHUNK_TYPE Sb(JH_CHUNK_TYPE x, JH_BASE_TYPE c)
 
 #else
 
-JH_CHUNK_TYPE Sb(JH_CHUNK_TYPE x, JH_BASE_TYPE c)
+JH_CHUNK_TYPE Sb_new(JH_CHUNK_TYPE x, JH_BASE_TYPE c)
 {
 	x.hi.hi = ~x.hi.hi;
 	x.lo.lo ^= c & ~x.hi.lo;
@@ -207,9 +207,9 @@ JH_CHUNK_TYPE Sb(JH_CHUNK_TYPE x, JH_BASE_TYPE c)
 
 #endif
 
-#define Ceven_hi(r)   	JH_BASE_TYPE_CAST(C[((r) << 2) + 0])
-#define Ceven_lo(r)   	JH_BASE_TYPE_CAST(C[((r) << 2) + 1])
-#define Codd_hi(r)    	JH_BASE_TYPE_CAST(C[((r) << 2) + 2])
-#define Codd_lo(r)    	JH_BASE_TYPE_CAST(C[((r) << 2) + 3])
+#define Ceven_hi_new(r)   	JH_BASE_TYPE_CAST(C_new[((r) << 2) + 0])
+#define Ceven_lo_new(r)   	JH_BASE_TYPE_CAST(C_new[((r) << 2) + 1])
+#define Codd_hi_new(r)    	JH_BASE_TYPE_CAST(C_new[((r) << 2) + 2])
+#define Codd_lo_new(r)    	JH_BASE_TYPE_CAST(C_new[((r) << 2) + 3])
 
 #endif

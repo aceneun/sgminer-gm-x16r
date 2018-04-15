@@ -90,10 +90,13 @@ typedef int sph_s32;
 #endif
 #define SPH_HAMSI_EXPAND_BIG 1
 
+#define WOLF_JH_64BIT 1
+
 #include "blake.cl"
 #include "bmw.cl"
 #include "pallas-groestl.cl"
 #include "jh.cl"
+#include "wolf-jh.cl"
 #include "keccak.cl"
 #include "skein.cl"
 #include "wolf-skein.cl"
@@ -1258,47 +1261,167 @@ __kernel void search7(__global hash_t* hashes)
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
-  sph_u64 h0h = C64e(0x6fd14b963e00aa17), h0l = C64e(0x636a2e057a15d543), h1h = C64e(0x8a225e8d0c97ef0b), h1l = C64e(0xe9341259f2b3c361), h2h = C64e(0x891da0c1536f801e), h2l = C64e(0x2aa9056bea2b6d80), h3h = C64e(0x588eccdb2075baa6), h3l = C64e(0xa90f3a76baf83bf7);
-  sph_u64 h4h = C64e(0x0169e60541e34a69), h4l = C64e(0x46b58a8e2e6fe65a), h5h = C64e(0x1047a7d0c1843c24), h5l = C64e(0x3b6e71b12d5ac199), h6h = C64e(0xcf57f6ec9db1f856), h6l = C64e(0xa706887c5716b156), h7h = C64e(0xe3c2fcdfe68517fb), h7l = C64e(0x545a4678cc8cdd4b);
-  sph_u64 tmp;
-
-  for(int i = 0; i < 2; i++) {
-    if (i == 0) {
-      h0h ^= hash->h8[0];
-      h0l ^= hash->h8[1];
-      h1h ^= hash->h8[2];
-      h1l ^= hash->h8[3];
-      h2h ^= hash->h8[4];
-      h2l ^= hash->h8[5];
-      h3h ^= hash->h8[6];
-      h3l ^= hash->h8[7];
-    }
-    else if(i == 1) {
-      h4h ^= hash->h8[0];
-      h4l ^= hash->h8[1];
-      h5h ^= hash->h8[2];
-      h5l ^= hash->h8[3];
-      h6h ^= hash->h8[4];
-      h6l ^= hash->h8[5];
-      h7h ^= hash->h8[6];
-      h7l ^= hash->h8[7];
-
-      h0h ^= 0x80;
-      h3l ^= 0x2000000000000;
-    }
-    E8;
-  }
-  h4h ^= 0x80;
-  h7l ^= 0x2000000000000;
-
-  hash->h8[0] = h4h;
-  hash->h8[1] = h4l;
-  hash->h8[2] = h5h;
-  hash->h8[3] = h5l;
-  hash->h8[4] = h6h;
-  hash->h8[5] = h6l;
-  hash->h8[6] = h7h;
-  hash->h8[7] = h7l;
+  JH_CHUNK_TYPE evnhi = (JH_CHUNK_TYPE)(JH_BASE_TYPE_CAST(0x17AA003E964BD16FUL), JH_BASE_TYPE_CAST(0x1E806F53C1A01D89UL), JH_BASE_TYPE_CAST(0x694AE34105E66901UL), JH_BASE_TYPE_CAST(0x56F8B19DECF657CFUL));
+	JH_CHUNK_TYPE evnlo = (JH_CHUNK_TYPE)(JH_BASE_TYPE_CAST(0x43D5157A052E6A63UL), JH_BASE_TYPE_CAST(0x806D2BEA6B05A92AUL), JH_BASE_TYPE_CAST(0x5AE66F2E8E8AB546UL), JH_BASE_TYPE_CAST(0x56B116577C8806A7UL));
+	JH_CHUNK_TYPE oddhi = (JH_CHUNK_TYPE)(JH_BASE_TYPE_CAST(0x0BEF970C8D5E228AUL), JH_BASE_TYPE_CAST(0xA6BA7520DBCC8E58UL), JH_BASE_TYPE_CAST(0x243C84C1D0A74710UL), JH_BASE_TYPE_CAST(0xFB1785E6DFFCC2E3UL));
+	JH_CHUNK_TYPE oddlo = (JH_CHUNK_TYPE)(JH_BASE_TYPE_CAST(0x61C3B3F2591234E9UL), JH_BASE_TYPE_CAST(0xF73BF8BA763A0FA9UL), JH_BASE_TYPE_CAST(0x99C15A2DB1716E3BUL), JH_BASE_TYPE_CAST(0x4BDD8CCC78465A54UL));
+	
+	#ifdef WOLF_JH_64BIT
+	
+	evnhi.s0 ^= JH_BASE_TYPE_CAST(hash->h8[0]);
+	evnlo.s0 ^= JH_BASE_TYPE_CAST(hash->h8[1]);
+	oddhi.s0 ^= JH_BASE_TYPE_CAST(hash->h8[2]);
+	oddlo.s0 ^= JH_BASE_TYPE_CAST(hash->h8[3]);
+	evnhi.s1 ^= JH_BASE_TYPE_CAST(hash->h8[4]);
+	evnlo.s1 ^= JH_BASE_TYPE_CAST(hash->h8[5]);
+	oddhi.s1 ^= JH_BASE_TYPE_CAST(hash->h8[6]);
+	oddlo.s1 ^= JH_BASE_TYPE_CAST(hash->h8[7]);
+	
+	#else
+	
+	evnhi.lo.lo ^= JH_BASE_TYPE_CAST(hash->h8[0]);
+	evnlo.lo.lo ^= JH_BASE_TYPE_CAST(hash->h8[1]);
+	oddhi.lo.lo ^= JH_BASE_TYPE_CAST(hash->h8[2]);
+	oddlo.lo.lo ^= JH_BASE_TYPE_CAST(hash->h8[3]);
+	evnhi.lo.hi ^= JH_BASE_TYPE_CAST(hash->h8[4]);
+	evnlo.lo.hi ^= JH_BASE_TYPE_CAST(hash->h8[5]);
+	oddhi.lo.hi ^= JH_BASE_TYPE_CAST(hash->h8[6]);
+	oddlo.lo.hi ^= JH_BASE_TYPE_CAST(hash->h8[7]);
+	
+	#endif
+	
+	for(bool flag = false;; flag++)
+	{
+		#pragma unroll
+		for(int r = 0; r < 6; ++r)
+		{
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 0));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 0));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 0));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 0));
+						
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
+			
+			JH_RND(&oddhi, &oddlo, 0);
+			
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 1));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 1));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 1));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 1));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
+			
+			JH_RND(&oddhi, &oddlo, 1);
+			
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 2));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 2));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 2));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 2));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
+			
+			JH_RND(&oddhi, &oddlo, 2);
+			
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 3));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 3));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 3));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 3));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
+			
+			JH_RND(&oddhi, &oddlo, 3);
+			
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 4));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 4));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 4));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 4));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
+			
+			JH_RND(&oddhi, &oddlo, 4);
+			
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 5));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 5));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 5));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 5));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
+			
+			JH_RND(&oddhi, &oddlo, 5);
+			
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 6));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 6));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 6));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 6));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
+			
+			JH_RND(&oddhi, &oddlo, 6);
+		}
+				
+		if(flag) break;
+		
+		#ifdef WOLF_JH_64BIT
+		
+		evnhi.s2 ^= JH_BASE_TYPE_CAST(hash->h8[0]);
+		evnlo.s2 ^= JH_BASE_TYPE_CAST(hash->h8[1]);
+		oddhi.s2 ^= JH_BASE_TYPE_CAST(hash->h8[2]);
+		oddlo.s2 ^= JH_BASE_TYPE_CAST(hash->h8[3]);
+		evnhi.s3 ^= JH_BASE_TYPE_CAST(hash->h8[4]);
+		evnlo.s3 ^= JH_BASE_TYPE_CAST(hash->h8[5]);
+		oddhi.s3 ^= JH_BASE_TYPE_CAST(hash->h8[6]);
+		oddlo.s3 ^= JH_BASE_TYPE_CAST(hash->h8[7]);
+		
+		evnhi.s0 ^= JH_BASE_TYPE_CAST(0x80UL);
+		oddlo.s1 ^= JH_BASE_TYPE_CAST(0x0002000000000000UL);
+		
+		#else
+			
+		evnhi.hi.lo ^= JH_BASE_TYPE_CAST(hash->h8[0]);
+		evnlo.hi.lo ^= JH_BASE_TYPE_CAST(hash->h8[1]);
+		oddhi.hi.lo ^= JH_BASE_TYPE_CAST(hash->h8[2]);
+		oddlo.hi.lo ^= JH_BASE_TYPE_CAST(hash->h8[3]);
+		evnhi.hi.hi ^= JH_BASE_TYPE_CAST(hash->h8[4]);
+		evnlo.hi.hi ^= JH_BASE_TYPE_CAST(hash->h8[5]);
+		oddhi.hi.hi ^= JH_BASE_TYPE_CAST(hash->h8[6]);
+		oddlo.hi.hi ^= JH_BASE_TYPE_CAST(hash->h8[7]);
+		
+		evnhi.lo.lo ^= JH_BASE_TYPE_CAST(0x80UL);
+		oddlo.lo.hi ^= JH_BASE_TYPE_CAST(0x0002000000000000UL);
+		
+		#endif
+	}
+	
+	#ifdef WOLF_JH_64BIT
+	
+	evnhi.s2 ^= JH_BASE_TYPE_CAST(0x80UL);
+	oddlo.s3 ^= JH_BASE_TYPE_CAST(0x2000000000000UL);
+	
+	hash->h8[0] = as_ulong(evnhi.s2);
+	hash->h8[1] = as_ulong(evnlo.s2);
+	hash->h8[2] = as_ulong(oddhi.s2);
+	hash->h8[3] = as_ulong(oddlo.s2);
+	hash->h8[4] = as_ulong(evnhi.s3);
+	hash->h8[5] = as_ulong(evnlo.s3);
+	hash->h8[6] = as_ulong(oddhi.s3);
+	hash->h8[7] = as_ulong(oddlo.s3);
+	
+	#else
+	
+	evnhi.hi.lo ^= JH_BASE_TYPE_CAST(0x80UL);
+	oddlo.hi.hi ^= JH_BASE_TYPE_CAST(0x2000000000000UL);
+	
+	hash->h8[0] = as_ulong(evnhi.hi.lo);
+	hash->h8[1] = as_ulong(evnlo.hi.lo);
+	hash->h8[2] = as_ulong(oddhi.hi.lo);
+	hash->h8[3] = as_ulong(oddlo.hi.lo);
+	hash->h8[4] = as_ulong(evnhi.hi.hi);
+	hash->h8[5] = as_ulong(evnlo.hi.hi);
+	hash->h8[6] = as_ulong(oddhi.hi.hi);
+	hash->h8[7] = as_ulong(oddlo.hi.hi);
+	
+	#endif
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
