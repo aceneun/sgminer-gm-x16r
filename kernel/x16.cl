@@ -143,7 +143,7 @@ typedef union {
 } hash_t;
 
 #ifndef WORKSIZE
-#define WORKSIZE 256
+#define WORKSIZE 64
 #endif
 
 // blake64

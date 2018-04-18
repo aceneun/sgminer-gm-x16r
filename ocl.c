@@ -370,7 +370,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 
   clState->goffset = true;
 
-  clState->wsize = (cgpu->work_size && cgpu->work_size <= clState->max_work_size) ? cgpu->work_size : 256;
+  clState->wsize = (cgpu->work_size && cgpu->work_size <= clState->max_work_size) ? cgpu->work_size : 64;
 
   if (!cgpu->opt_lg) {
     applog(LOG_DEBUG, "GPU %d: selecting lookup gap of 2", gpu);
