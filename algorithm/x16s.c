@@ -77,8 +77,7 @@ const char* X16S_ALGO_NAMES[X16S_HASH_FUNC_COUNT] = {
   "fugue",
   "shabal",
   "whirlpool",
-  "sha512",
-  NULL
+  "sha512"
 };
 
 /*

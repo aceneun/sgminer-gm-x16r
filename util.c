@@ -1399,7 +1399,7 @@ bool sock_keepalived(struct pool *pool, const char *rpc2_id, int work_id)
 
   if (!pool->no_keepalive && pool->algorithm.type == ALGO_CRYPTONIGHT) {
     size_t size = 128 + strlen(rpc2_id);
-    char *s = malloc(size);
+    char *s = (char*) malloc(size);
     snprintf(s, size, "{\"method\": \"keepalived\", \"params\": {\"id\": \"%s\"}, \"id\": \"ping\"}", rpc2_id);
 
     ret = stratum_send(pool, s, strlen(s));
@@ -2050,12 +2050,12 @@ static bool parse_target(struct pool *pool, json_t *val)
 {
   uint8_t oldtarget[32], target[32], *str;
 
-  if ((str = json_array_string(val, 0)) == NULL) {
+  if ((str = (uint8_t*) json_array_string(val, 0)) == NULL) {
     applog(LOG_DEBUG, "parse_target: Missing an array value.");
     return false;
   }
 
-  hex2bin(target, str, 32);
+  hex2bin(target, (char*) str, 32);
 
   cg_wlock(&pool->data_lock);
   memcpy(oldtarget, pool->Target, 32);

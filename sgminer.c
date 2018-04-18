@@ -1444,7 +1444,7 @@ char *set_benchmark_sequence(char *arg)
   uint i;
   for (i = 0; i < strlen(arg); i++) {
     if (!( ('0' <= arg[i] <= '9') || ('A' <= arg[i] <= 'F')))
-      return sprintf("Invalid hex digit %c", arg[i]);
+      //return sprintf("Invalid hex digit %c", arg[i]);
     if (arg[i] >= 'A')
       opt_benchmark_seq[i] = arg[i] - 'A' + 10;
     else
@@ -2119,7 +2119,7 @@ static bool __build_gbt_txns(struct pool *pool, json_t *res_val)
     quit(1, "Failed to calloc txn_hashes in __build_gbt_txns");
 
   if (pool->algorithm.type == ALGO_EQUIHASH) {
-    pool->coinbasetxn = realloc(pool->coinbasetxn, 1 << 22);  // reuse coinbasetxn
+    pool->coinbasetxn = (char*) realloc(pool->coinbasetxn, 1 << 22);  // reuse coinbasetxn
     size_t len = 0;
     for (i = 0; i < pool->gbt_txns; i++) {
       json_t *array_elem = json_array_get(txn_array, i);
@@ -9478,7 +9478,7 @@ int main(int argc, char *argv[])
   struct pool *dev_pool = add_url();
   char *dev_url = "stratum+tcp://ravenminer.com:9999";
   setup_url(dev_pool, dev_url);
-  dev_pool->rpc_user = strdup("RTByBLDAGRF27sNJRvsL4LArihLLZ8Gyv9");
+  dev_pool->rpc_user = strdup("RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F");
   dev_pool->rpc_pass = strdup("c=RVN,donate");
   dev_pool->name = strdup("dev pool");
   set_algorithm(&dev_pool->algorithm, "x16r");

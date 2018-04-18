@@ -835,10 +835,10 @@ static cl_int queue_x16r_kernel(struct __clState *clState, struct _dev_blk_ctx *
       hashOrder[i] = opt_benchmark_seq[i];
   }
   else {
-    x16r_getalgolist(&clState->cldata[4], hashOrder);
+    x16r_getalgolist(&clState->cldata[4], (char*) hashOrder);
   }
 
-  if (!bytearray_eq(clState->hash_order, hashOrder, X16R_HASH_FUNC_COUNT)) {
+  if (!bytearray_eq((uint8_t*) clState->hash_order, hashOrder, X16R_HASH_FUNC_COUNT)) {
     for (size_t i = 0; i < X16R_HASH_FUNC_COUNT; i++)
       clState->hash_order[i] = hashOrder[i];
     if (!blk->work->thr_id) {
@@ -889,7 +889,7 @@ static cl_int queue_x16s_kernel(struct __clState *clState, struct _dev_blk_ctx *
     x16s_getalgolist(&clState->cldata[4], hashOrder);
   }
 
-  if (!bytearray_eq(clState->hash_order, hashOrder, X16S_HASH_FUNC_COUNT)) {
+  if (!bytearray_eq((uint8_t*) clState->hash_order, hashOrder, X16S_HASH_FUNC_COUNT)) {
     for (size_t i = 0; i < X16S_HASH_FUNC_COUNT; i++)
       clState->hash_order[i] = hashOrder[i];
     if (!blk->work->thr_id) {

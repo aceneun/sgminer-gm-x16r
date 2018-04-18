@@ -121,7 +121,7 @@ void x16r_hash(void *state, const void *input)
     for (uint8_t i = 0; i < X16R_HASH_FUNC_COUNT; i++)
       hashOrder[i] = opt_benchmark_seq[i];
   }
-  else x16r_getalgolist((uint8_t*)input + 4, hashOrder);
+  else x16r_getalgolist((uint8_t*)input + 4, (char*) hashOrder);
 
   for (int i = 0; i < X16R_HASH_FUNC_COUNT; i++)
   {

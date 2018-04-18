@@ -35,7 +35,7 @@ const char* X16R_ALGO_NAMES[X16R_HASH_FUNC_COUNT];
 static inline
 void x16r_getalgolist(const uint8_t* data, char *output)
 {
-  uint8_t *orig = output;
+  uint8_t *orig = (uint8_t*) output;
 
   for (int j = 0; j < X16R_HASH_FUNC_COUNT; j++) {
     int b = (15 - j) >> 1;
