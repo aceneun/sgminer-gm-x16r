@@ -242,9 +242,6 @@
     <ClCompile Include="..\algorithm\x16r.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
-    <ClCompile Include="..\algorithm\xevan.c">
-      <Filter>Source Files\algorithm</Filter>
-    </ClCompile>
     <ClCompile Include="..\algorithm\yescrypt.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
@@ -262,12 +259,6 @@
     </ClCompile>
     <ClCompile Include="..\sph\sha256_Y.c">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sph\haval.c">
-      <Filter>Source Files\sph</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sph\haval_helper.c">
-      <Filter>Source Files\sph</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -496,9 +487,6 @@
     <ClInclude Include="..\algorithm\x16r.h">
       <Filter>Header Files\algorithm</Filter>
     </ClInclude>
-    <ClInclude Include="..\algorithm\xevan.h">
-      <Filter>Header Files\algorithm</Filter>
-    </ClInclude>
     <ClInclude Include="..\algorithm\yescrypt.h">
       <Filter>Header Files\algorithm</Filter>
     </ClInclude>
@@ -514,14 +502,8 @@
     <ClInclude Include="..\sysfs-gpu-controls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lib\dirent.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\algorithm\x16s.h">
       <Filter>Header Files\algorithm</Filter>
-    </ClInclude>
-    <ClInclude Include="..\sph\sph_haval.h">
-      <Filter>Header Files\sph</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

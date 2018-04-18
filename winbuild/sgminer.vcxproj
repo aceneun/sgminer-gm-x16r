@@ -281,7 +281,6 @@
     <ClCompile Include="..\algorithm\whirlcoin.c" />
     <ClCompile Include="..\algorithm\x16r.c" />
     <ClCompile Include="..\algorithm\x16s.c" />
-    <ClCompile Include="..\algorithm\xevan.c" />
     <ClCompile Include="..\algorithm\yescrypt-opt.c" />
     <ClCompile Include="..\algorithm\yescrypt.c" />
     <ClCompile Include="..\algorithm\yescryptcommon.c" />
@@ -321,8 +320,6 @@
     <ClCompile Include="..\sph\groestl.c" />
     <ClCompile Include="..\sph\hamsi.c" />
     <ClCompile Include="..\sph\hamsi_helper.c" />
-    <ClCompile Include="..\sph\haval.c" />
-    <ClCompile Include="..\sph\haval_helper.c" />
     <ClCompile Include="..\sph\jh.c" />
     <ClCompile Include="..\sph\keccak.c" />
     <ClCompile Include="..\sph\luffa.c" />
@@ -366,7 +363,6 @@
     <ClInclude Include="..\algorithm\whirlcoin.h" />
     <ClInclude Include="..\algorithm\x16r.h" />
     <ClInclude Include="..\algorithm\x16s.h" />
-    <ClInclude Include="..\algorithm\xevan.h" />
     <ClInclude Include="..\algorithm\yescrypt.h" />
     <ClInclude Include="..\algorithm\yescrypt_core.h" />
     <ClInclude Include="..\api.h" />
@@ -405,7 +401,6 @@
     <ClInclude Include="..\sph\sph_fugue.h" />
     <ClInclude Include="..\sph\sph_groestl.h" />
     <ClInclude Include="..\sph\sph_hamsi.h" />
-    <ClInclude Include="..\sph\sph_haval.h" />
     <ClInclude Include="..\sph\sph_jh.h" />
     <ClInclude Include="..\sph\sph_keccak.h" />
     <ClInclude Include="..\sph\sph_luffa.h" />
