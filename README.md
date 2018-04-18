@@ -34,6 +34,9 @@ Please consider supporting this project by donating to these addresses (brianmct
 
 **DOGE**: D7h81HeRVV3xPWL9CqCC2Z6AevG4gBdGxZ
 
+Please consider supporting this project by donating to these addresses (KL0nLutiy):
+
+**RVN**: RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F
 
 ## Documentation
 

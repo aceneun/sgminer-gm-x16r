@@ -1,14 +1,21 @@
-setx GPU_FORCE_64BIT_PTR 0
+set GPU_FORCE_64BIT_PTR=0
+set GPU_USE_SYNC_OBJECTS=1
+set GPU_MAX_ALLOC_PERCENT=100
+set GPU_SINGLE_ALLOC_PERCENT=100
+set GPU_MAX_HEAP_SIZE=100
 
-setx GPU_MAX_HEAP_SIZE 100
-
-setx GPU_USE_SYNC_OBJECTS 1
-
-setx GPU_MAX_ALLOC_PERCENT 100
-
-del *.bin
-
-
-sgminer.exe --no-submit-stale --kernel Lyra2RE -o stratum+tcp://92.27.201.170:9174 -u m -p 1 --gpu-platform 2 -I 19 --shaders 2816  -w 64 -g 2 
-
+:: Replace the -o, -u, and -p arguments with your own pool, user, and password.
+:: All three arguments are required.
+sgminer.exe -k x16r -o stratum+tcp://minepool.com:3636 -u RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F -p x -X 320 --gpu-platform=1 --device 1 -g 2
 pause
+
+:: Notes:
+:: - xIntensities of 128-1024 usually work fine. Feel free to tweak it to your liking, but
+::   keep the xIntensity to a multiple of 64.
+::   Note that higher intensities can sometimes lower your hashrate, since it creates more
+::   work units at once; after a certain point, the work units take longer to return and
+::   this will actually decrease your hashrate.
+:: - If you have an integrated GPU, you might have to set the OpenCL platform correctly
+::   using --gpu-platform. --gpu-platform=1 usually works here if the default isn't working.
+
+
