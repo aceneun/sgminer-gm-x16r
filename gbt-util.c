@@ -231,7 +231,7 @@ bool set_coinbasetxn(struct pool *pool, uint32_t height, uint64_t coinbasevalue,
   uint8_t raw_address[20];
   if (!address_decode(raw_address, strchr(pool->rpc_user, '.') + 1, 2))  // decode zcash address
     return false;
-  pool->coinbase = realloc(pool->coinbase, 512 + pool->n2size);  // alloc some extra space
+  pool->coinbase = (unsigned char*) realloc(pool->coinbase, 512 + pool->n2size);  // alloc some extra space
 
   offset += add_int32(pool->coinbase + offset, 1);  // version
   offset += add_var_int(pool->coinbase + offset, 1);  // number of inputs

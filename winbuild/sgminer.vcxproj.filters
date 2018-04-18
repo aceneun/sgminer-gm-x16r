@@ -260,6 +260,15 @@
     <ClCompile Include="..\sph\sha256_Y.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\algorithm\ethgencache.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\gbt-util.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\algorithm\eth-sha3.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\adl.h">
@@ -504,6 +513,12 @@
     </ClInclude>
     <ClInclude Include="..\algorithm\x16s.h">
       <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\dirent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\gbt-util.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

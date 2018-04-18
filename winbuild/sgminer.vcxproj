@@ -267,7 +267,9 @@
     <ClCompile Include="..\algorithm\credits.c" />
     <ClCompile Include="..\algorithm\cryptonight.c" />
     <ClCompile Include="..\algorithm\equihash.c" />
+    <ClCompile Include="..\algorithm\eth-sha3.c" />
     <ClCompile Include="..\algorithm\ethash.c" />
+    <ClCompile Include="..\algorithm\ethgencache.c" />
     <ClCompile Include="..\algorithm\lyra2.c" />
     <ClCompile Include="..\algorithm\lyra2re.c" />
     <ClCompile Include="..\algorithm\lyra2rev2.c" />
@@ -296,6 +298,7 @@
     <ClCompile Include="..\findnonce.c" />
     <ClCompile Include="..\algorithm\fuguecoin.c" />
     <ClCompile Include="..\algorithm\groestlcoin.c" />
+    <ClCompile Include="..\gbt-util.c" />
     <ClCompile Include="..\hexdump.c" />
     <ClCompile Include="..\algorithm\inkcoin.c" />
     <ClCompile Include="..\logging.c" />
@@ -379,6 +382,7 @@
     <ClInclude Include="..\algorithm\fuguecoin.h" />
     <ClInclude Include="..\algorithm\groestlcoin.h" />
     <ClInclude Include="..\algorithm\inkcoin.h" />
+    <ClInclude Include="..\gbt-util.h" />
     <ClInclude Include="..\lib\dirent.h" />
     <ClInclude Include="..\logging.h" />
     <ClInclude Include="..\algorithm\marucoin.h" />
