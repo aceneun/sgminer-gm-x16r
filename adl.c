@@ -11,9 +11,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <curses.h>
 
-
+#ifdef HAVE_CURSES
+# include <curses.h>
+#endif
+ 
 #include "miner.h"
 
 bool adl_active = false;

@@ -192,7 +192,7 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
-      <AdditionalLibraryDirectories>D:\top\avermore-miner\winbuild\jansson\Release\x86;D:\top\avermore-miner\winbuild\dist\lib\x86;$(ProjectDir)dist\lib\x86;$(ProjectDir)jansson\Release\x86</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)dist\lib\x86;$(ProjectDir)jansson\Release\x86</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>
       </LinkTimeCodeGeneration>
