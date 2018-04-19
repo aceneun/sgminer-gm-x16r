@@ -260,14 +260,14 @@ __constant static const sph_u64 BLAKE_IV512[8] = {
 #if SPH_64
 
 #define GB(m0, m1, c0, c1, a, b, c, d)   do { \
-    a = SPH_T64(a + b + (m0 ^ c1)); \
-    d = SPH_ROTR64(d ^ a, 32); \
-    c = SPH_T64(c + d); \
-    b = SPH_ROTR64(b ^ c, 25); \
-    a = SPH_T64(a + b + (m1 ^ c0)); \
-    d = SPH_ROTR64(d ^ a, 16); \
-    c = SPH_T64(c + d); \
-    b = SPH_ROTR64(b ^ c, 11); \
+    a += b + (m0 ^ c1); \
+    d = as_ulong(as_uint2(d ^ a).s10); \
+    c += d; \
+    b = FAST_ROTL64_HI(as_uint2(b ^ c), 39U); \
+    a += b + (m1 ^ c0); \
+    d = as_ulong(as_ushort4(d ^ a).s1230); \
+    c += d; \
+    b = FAST_ROTL64_HI(as_uint2(b ^ c), 53U); \
   } while (0)
 
 #define ROUND_B(r)   do { \

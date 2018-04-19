@@ -104,6 +104,7 @@ ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign
 #include "skein.cl"
 #include "wolf-skein.cl"
 #include "luffa.cl"
+#include "wolf-luffa.cl"
 #include "cubehash.cl"
 #include "shavite.cl"
 #include "simd.cl"
@@ -1203,66 +1204,46 @@ __kernel void search13(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-
-  // luffa
-
-  sph_u32 V00 = SPH_C32(0x6d251e69), V01 = SPH_C32(0x44b051e0), V02 = SPH_C32(0x4eaa6fb4), V03 = SPH_C32(0xdbf78465), V04 = SPH_C32(0x6e292011), V05 = SPH_C32(0x90152df4), V06 = SPH_C32(0xee058139), V07 = SPH_C32(0xdef610bb);
-  sph_u32 V10 = SPH_C32(0xc3b44b95), V11 = SPH_C32(0xd9d2f256), V12 = SPH_C32(0x70eee9a0), V13 = SPH_C32(0xde099fa3), V14 = SPH_C32(0x5d9b0557), V15 = SPH_C32(0x8fc944b3), V16 = SPH_C32(0xcf1ccf0e), V17 = SPH_C32(0x746cd581);
-  sph_u32 V20 = SPH_C32(0xf7efc89d), V21 = SPH_C32(0x5dba5781), V22 = SPH_C32(0x04016ce5), V23 = SPH_C32(0xad659c05), V24 = SPH_C32(0x0306194f), V25 = SPH_C32(0x666d1836), V26 = SPH_C32(0x24aa230a), V27 = SPH_C32(0x8b264ae7);
-  sph_u32 V30 = SPH_C32(0x858075d5), V31 = SPH_C32(0x36d79cce), V32 = SPH_C32(0xe571f7d7), V33 = SPH_C32(0x204b1f67), V34 = SPH_C32(0x35870c6a), V35 = SPH_C32(0x57e9e923), V36 = SPH_C32(0x14bcb808), V37 = SPH_C32(0x7cde72ce);
-  sph_u32 V40 = SPH_C32(0x6c68e9be), V41 = SPH_C32(0x5ec41e22), V42 = SPH_C32(0xc825b7c7), V43 = SPH_C32(0xaffb4363), V44 = SPH_C32(0xf5df3999), V45 = SPH_C32(0x0fc688f1), V46 = SPH_C32(0xb07224cc), V47 = SPH_C32(0x03e86cea);
-
-  DECL_TMP8(M);
-
-  M0 = DEC32E(hash->h4[0]);
-  M1 = DEC32E(hash->h4[1]);
-  M2 = DEC32E(hash->h4[2]);
-  M3 = DEC32E(hash->h4[3]);
-  M4 = DEC32E(hash->h4[4]);
-  M5 = DEC32E(hash->h4[5]);
-  M6 = DEC32E(hash->h4[6]);
-  M7 = DEC32E(hash->h4[7]);
-
-  for(uint i = 0; i < 5; i++) {
-    MI5;
-    LUFFA_P5;
-
-    if(i == 0) {
-      M0 = DEC32E(hash->h4[8]);
-      M1 = DEC32E(hash->h4[9]);
-      M2 = DEC32E(hash->h4[10]);
-      M3 = DEC32E(hash->h4[11]);
-      M4 = DEC32E(hash->h4[12]);
-      M5 = DEC32E(hash->h4[13]);
-      M6 = DEC32E(hash->h4[14]);
-      M7 = DEC32E(hash->h4[15]);
+	
+	uint8 V[5] =
+	{
+		(uint8)(0x6D251E69U, 0x44B051E0U, 0x4EAA6FB4U, 0xDBF78465U, 0x6E292011U, 0x90152DF4U, 0xEE058139U, 0xDEF610BBU),
+		(uint8)(0xC3B44B95U, 0xD9D2F256U, 0x70EEE9A0U, 0xDE099FA3U, 0x5D9B0557U, 0x8FC944B3U, 0xCF1CCF0EU, 0x746CD581U),
+		(uint8)(0xF7EFC89DU, 0x5DBA5781U, 0x04016CE5U, 0xAD659C05U, 0x0306194FU, 0x666D1836U, 0x24AA230AU, 0x8B264AE7U),
+		(uint8)(0x858075D5U, 0x36D79CCEU, 0xE571F7D7U, 0x204B1F67U, 0x35870C6AU, 0x57E9E923U, 0x14BCB808U, 0x7CDE72CEU),
+		(uint8)(0x6C68E9BEU, 0x5EC41E22U, 0xC825B7C7U, 0xAFFB4363U, 0xF5DF3999U, 0x0FC688F1U, 0xB07224CCU, 0x03E86CEAU)
+	};
+	
+	#pragma unroll
+	for(int i = 0; i < 8; ++i) hash->h8[i] = SWAP8(hash->h8[i]);
+	
+	#pragma unroll
+    for(int i = 0; i < 6; ++i)
+    {
+		uint8 M;
+		switch(i)
+		{
+			case 0:
+			case 1:
+				M = shuffle(vload8(i, hash->h4), (uint8)(1, 0, 3, 2, 5, 4, 7, 6));
+				break;
+			case 2:
+			case 3:
+				M = (uint8)(0);
+				M.s0 = select(M.s0, 0x80000000, i==2);
+				break;
+			case 4:
+			case 5:
+				vstore8(shuffle(V[0] ^ V[1] ^ V[2] ^ V[3] ^ V[4], (uint8)(1, 0, 3, 2, 5, 4, 7, 6)), i & 1, hash->h4);
+		}
+		if(i == 5) break;
+		
+		MessageInj(V, M);
+		LuffaPerm(V);
     }
-    else if(i == 1) {
-      M0 = 0x80000000;
-      M1 = M2 = M3 = M4 = M5 = M6 = M7 = 0;
-    }
-    else if(i == 2)
-      M0 = M1 = M2 = M3 = M4 = M5 = M6 = M7 = 0;
-    else if(i == 3) {
-      hash->h4[0] = ENC32E(V00 ^ V10 ^ V20 ^ V30 ^ V40);
-      hash->h4[1] = ENC32E(V01 ^ V11 ^ V21 ^ V31 ^ V41);
-      hash->h4[2] = ENC32E(V02 ^ V12 ^ V22 ^ V32 ^ V42);
-      hash->h4[3] = ENC32E(V03 ^ V13 ^ V23 ^ V33 ^ V43);
-      hash->h4[4] = ENC32E(V04 ^ V14 ^ V24 ^ V34 ^ V44);
-      hash->h4[5] = ENC32E(V05 ^ V15 ^ V25 ^ V35 ^ V45);
-      hash->h4[6] = ENC32E(V06 ^ V16 ^ V26 ^ V36 ^ V46);
-      hash->h4[7] = ENC32E(V07 ^ V17 ^ V27 ^ V37 ^ V47);
-    }
-  }
-
-  hash->h4[8] =  ENC32E(V00 ^ V10 ^ V20 ^ V30 ^ V40);
-  hash->h4[9] =  ENC32E(V01 ^ V11 ^ V21 ^ V31 ^ V41);
-  hash->h4[10] = ENC32E(V02 ^ V12 ^ V22 ^ V32 ^ V42);
-  hash->h4[11] = ENC32E(V03 ^ V13 ^ V23 ^ V33 ^ V43);
-  hash->h4[12] = ENC32E(V04 ^ V14 ^ V24 ^ V34 ^ V44);
-  hash->h4[13] = ENC32E(V05 ^ V15 ^ V25 ^ V35 ^ V45);
-  hash->h4[14] = ENC32E(V06 ^ V16 ^ V26 ^ V36 ^ V46);
-  hash->h4[15] = ENC32E(V07 ^ V17 ^ V27 ^ V37 ^ V47);
+	
+	#pragma unroll
+	for(int i = 0; i < 8; ++i) hash->h8[i] = SWAP8(hash->h8[i]);
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
