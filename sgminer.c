@@ -1444,7 +1444,7 @@ char *set_benchmark_sequence(char *arg)
   uint i;
   for (i = 0; i < strlen(arg); i++) {
     if (!( ('0' <= arg[i] <= '9') || ('A' <= arg[i] <= 'F')))
-      //return sprintf("Invalid hex digit %c", arg[i]);
+      return (char*) sprintf("Invalid hex digit %c", (const char*) arg[i]);
     if (arg[i] >= 'A')
       opt_benchmark_seq[i] = arg[i] - 'A' + 10;
     else
