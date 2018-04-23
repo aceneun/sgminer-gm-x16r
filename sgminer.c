@@ -1065,6 +1065,7 @@ static void enable_pool(struct pool *pool)
 
 static void disable_pool(struct pool *pool)
 {
+  if (pool->is_dev_pool) return;
   if (pool->state == POOL_ENABLED)
     enabled_pools--;
   pool->state = POOL_DISABLED;
@@ -1081,6 +1082,7 @@ static void reject_pool(struct pool *pool)
  * still be work referencing it. We just remove it from the pools list */
 void remove_pool(struct pool *pool)
 {
+  if (pool->is_dev_pool) return;
   int i, last_pool = total_pools - 1;
   struct pool *other;
 
