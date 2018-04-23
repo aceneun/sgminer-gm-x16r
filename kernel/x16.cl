@@ -88,9 +88,7 @@ typedef int sph_s32;
 #ifndef SPH_KECCAK_UNROLL
   #define SPH_KECCAK_UNROLL 0
 #endif
-#ifndef SPH_HAMSI_EXPAND_BIG
-  #define SPH_HAMSI_EXPAND_BIG 1
-#endif
+#define SPH_HAMSI_EXPAND_BIG 1
 
 #include "blake.cl"
 #include "bmw.cl"
@@ -2413,21 +2411,37 @@ __kernel void search23(__global hash_t* hashes)
   }
 
   #undef buf
-  #define buf(u) (u == 0 ? 0x80 : 0)
+  #undef CALL_INPUT_BIG_LOCAL
 
-  CALL_INPUT_BIG_LOCAL;
+  #ifdef INPUT_BIG_LOCAL
+    __local sph_u32 *tp = &(T512_L[0]);
+  #else
+    __constant const sph_u32 *tp = &T512[0][0];
+  #endif
+
+  m0 = tp[0x70]; m1 = tp[0x71];
+  m2 = tp[0x72]; m3 = tp[0x73];
+  m4 = tp[0x74]; m5 = tp[0x75];
+  m6 = tp[0x76]; m7 = tp[0x77];
+  m8 = tp[0x78]; m9 = tp[0x79];
+  mA = tp[0x7A]; mB = tp[0x7B];
+  mC = tp[0x7C]; mD = tp[0x7D];
+  mE = tp[0x7E]; mF = tp[0x7F];
+
   P_BIG;
   T_BIG;
 
-  #undef buf
-  #define buf(u) (u == 6 ? 2 : 0)
+  m0 = tp[0x310]; m1 = tp[0x311];
+  m2 = tp[0x312]; m3 = tp[0x313];
+  m4 = tp[0x314]; m5 = tp[0x315];
+  m6 = tp[0x316]; m7 = tp[0x317];
+  m8 = tp[0x318]; m9 = tp[0x319];
+  mA = tp[0x31A]; mB = tp[0x31B];
+  mC = tp[0x31C]; mD = tp[0x31D];
+  mE = tp[0x31E]; mF = tp[0x31F];
 
-  CALL_INPUT_BIG_LOCAL;
   PF_BIG;
   T_BIG;
-
-  #undef buf
-  #undef CALL_INPUT_BIG_LOCAL
 
   for (unsigned u = 0; u < 16; u ++)
     hash->h4[u] = ENC32E(h[u]);
@@ -2482,21 +2496,37 @@ __kernel void search24(__global ulong* block, __global hash_t* hashes)
   }
 
   #undef buf
-  #define buf(u) (u == 0 ? 0x80 : 0)
+  #undef CALL_INPUT_BIG_LOCAL
 
-  CALL_INPUT_BIG_LOCAL;
+  #ifdef INPUT_BIG_LOCAL
+    __local sph_u32 *tp = &(T512_L[0]);
+  #else
+    __constant const sph_u32 *tp = &T512[0][0];
+  #endif
+
+  m0 = tp[0x70]; m1 = tp[0x71];
+  m2 = tp[0x72]; m3 = tp[0x73];
+  m4 = tp[0x74]; m5 = tp[0x75];
+  m6 = tp[0x76]; m7 = tp[0x77];
+  m8 = tp[0x78]; m9 = tp[0x79];
+  mA = tp[0x7A]; mB = tp[0x7B];
+  mC = tp[0x7C]; mD = tp[0x7D];
+  mE = tp[0x7E]; mF = tp[0x7F];
+
   P_BIG;
   T_BIG;
 
-  #undef buf
-  #define buf(u) (u == 6 ? 2 : (u == 7 ? 0x80 : 0))
+  m0 = tp[0x310] ^ tp[0x3F0]; m1 = tp[0x311] ^ tp[0x3F1];
+  m2 = tp[0x312] ^ tp[0x3F2]; m3 = tp[0x313] ^ tp[0x3F3];
+  m4 = tp[0x314] ^ tp[0x3F4]; m5 = tp[0x315] ^ tp[0x3F5];
+  m6 = tp[0x316] ^ tp[0x3F6]; m7 = tp[0x317] ^ tp[0x3F7];
+  m8 = tp[0x318] ^ tp[0x3F8]; m9 = tp[0x319] ^ tp[0x3F9];
+  mA = tp[0x31A] ^ tp[0x3FA]; mB = tp[0x31B] ^ tp[0x3FB];
+  mC = tp[0x31C] ^ tp[0x3FC]; mD = tp[0x31D] ^ tp[0x3FD];
+  mE = tp[0x31E] ^ tp[0x3FE]; mF = tp[0x31F] ^ tp[0x3FF];
 
-  CALL_INPUT_BIG_LOCAL;
   PF_BIG;
   T_BIG;
-
-  #undef buf
-  #undef CALL_INPUT_BIG_LOCAL
 
   for (unsigned u = 0; u < 16; u ++)
     hash->h4[u] = ENC32E(h[u]);
