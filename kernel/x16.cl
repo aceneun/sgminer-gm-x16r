@@ -1128,8 +1128,8 @@ __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search11(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
-    uint offset = get_global_offset(0);
-    __global hash_t *hash = &(hashes[gid-offset]);
+  uint offset = get_global_offset(0);
+  __global hash_t *hash = &(hashes[gid-offset]);
 	
 	const ulong8 m = vload8(0, hash->h8);
 	
@@ -1157,44 +1157,35 @@ __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search12(__global ulong* block, __global hash_t* hashes)
 {
   uint gid = get_global_id(0);
-  __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
+  uint offset = get_global_offset(0);
+  __global hash_t *hash = &(hashes[gid-offset]);
 
-  sph_u64 h0 = SPH_C64(0x4903ADFF749C51CE), h1 = SPH_C64(0x0D95DE399746DF03), h2 = SPH_C64(0x8FD1934127C79BCE), h3 = SPH_C64(0x9A255629FF352CB1), h4 = SPH_C64(0x5DB62599DF6CA7B0), h5 = SPH_C64(0xEABE394CA9D5C3F4), h6 = SPH_C64(0x991112C71A75B523), h7 = SPH_C64(0xAE18A40B660FCC33);
-  sph_u64 m0, m1, m2, m3, m4, m5, m6, m7;
-  sph_u64 bcount = 0;
+  ulong8 m = vload8(0, block);
 
-  m0 = block[0];
-  m1 = block[1];
-  m2 = block[2];
-  m3 = block[3];
-  m4 = block[4];
-  m5 = block[5];
-  m6 = block[6];
-  m7 = block[7];
-  bcount = 1;
+  const ulong8 h = (ulong8)(  0x4903ADFF749C51CEUL, 0x0D95DE399746DF03UL, 0x8FD1934127C79BCEUL, 0x9A255629FF352CB1UL,
+                0x5DB62599DF6CA7B0UL, 0xEABE394CA9D5C3F4UL, 0x991112C71A75B523UL, 0xAE18A40B660FCC33UL);
 
-  UBI_BIG(96 + (1 << 7), 0);
+  const ulong t[3] = { 0x40UL, 0x7000000000000000UL, 0x7000000000000040UL },
+       t1[3] = { 0x50UL, 0xB000000000000000UL, 0xB000000000000050UL },
+       t2[3] = { 0x08UL, 0xFF00000000000000UL, 0xFF00000000000008UL };
 
-  m0 = block[8];
-  m1 = (block[9] & 0xffffffff) ^ ((ulong)gid << 32);
-  m2 = m3 = m4 = m5 = m6 = m7 = 0;
-  bcount = 1;
+  ulong8 p = Skein512Block(m, h, 0xCAB2076D98173EC4UL, t);
 
-  UBI_BIG(352, 16);
+  ulong8 h2 = m ^ p;
 
-  m0 = m1 = m2 = m3 = m4 = m5 = m6 = m7 = 0;
-  bcount = 0;
+  m = (ulong8)(block[8], (block[9] & 0x00000000FFFFFFFF) ^ ((ulong)(gid) << 32), 0UL, 0UL, 0UL, 0UL, 0UL, 0UL);
+  ulong h8 = h2.s0 ^ h2.s1 ^ h2.s2 ^ h2.s3 ^ h2.s4 ^ h2.s5 ^ h2.s6 ^ h2.s7 ^ SKEIN_KS_PARITY;
 
-  UBI_BIG(510, 8);
+  p = Skein512Block(m, h2, h8, t1);
 
-  hash->h8[0] = h0;
-  hash->h8[1] = h1;
-  hash->h8[2] = h2;
-  hash->h8[3] = h3;
-  hash->h8[4] = h4;
-  hash->h8[5] = h5;
-  hash->h8[6] = h6;
-  hash->h8[7] = h7;
+  h2 = m ^ p;
+
+  p = (ulong8)(0);
+  h8 = h2.s0 ^ h2.s1 ^ h2.s2 ^ h2.s3 ^ h2.s4 ^ h2.s5 ^ h2.s6 ^ h2.s7 ^ SKEIN_KS_PARITY;
+
+  p = Skein512Block(p, h2, h8, t2);
+
+  vstore8(p, 0, hash->h8);
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
