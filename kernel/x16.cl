@@ -112,7 +112,6 @@ ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign
 #include "wolf-echo.cl"
 #include "hamsi.cl"
 #include "fugue.cl"
-#include "shabal.cl"
 #include "wolf-shabal.cl"
 #include "whirlpool.cl"
 #include "wolf-sha512.cl"
@@ -2375,18 +2374,18 @@ __kernel void search27(__global hash_t* hashes)
 	uint16 A, B, C, M;
 	uint Wlow = 1;
 	
-	A.s0 = A_init_512_wolf[0];
-	A.s1 = A_init_512_wolf[1];
-	A.s2 = A_init_512_wolf[2];
-	A.s3 = A_init_512_wolf[3];
-	A.s4 = A_init_512_wolf[4];
-	A.s5 = A_init_512_wolf[5];
-	A.s6 = A_init_512_wolf[6];
-	A.s7 = A_init_512_wolf[7];
-	A.s8 = A_init_512_wolf[8];
-	A.s9 = A_init_512_wolf[9];
-	A.sa = A_init_512_wolf[10];
-	A.sb = A_init_512_wolf[11];
+	A.s0 = A_init_512[0];
+	A.s1 = A_init_512[1];
+	A.s2 = A_init_512[2];
+	A.s3 = A_init_512[3];
+	A.s4 = A_init_512[4];
+	A.s5 = A_init_512[5];
+	A.s6 = A_init_512[6];
+	A.s7 = A_init_512[7];
+	A.s8 = A_init_512[8];
+	A.s9 = A_init_512[9];
+	A.sa = A_init_512[10];
+	A.sb = A_init_512[11];
 	
 	B = vload16(0, B_init_512);
 	C = vload16(0, C_init_512);
@@ -2424,7 +2423,7 @@ __kernel void search27(__global hash_t* hashes)
 		SWAP_BC_V;
 		
 		// INPUT_BLOCK_ADD
-		if(i == 0) B.s0 += M.s0;
+		B.s0 = select(B.s0, B.s0 += M.s0, i==0);
 		
 		// XOR_W;
 		A.s0 ^= Wlow;
@@ -2451,75 +2450,105 @@ __kernel void search27(__global hash_t* hashes)
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search28(__global uint* block, __global hash_t* hashes)
 {
-  uint gid = get_global_id(0);
-  __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
+ uint gid = get_global_id(0);
+  uint offset = get_global_offset(0);
+  __global hash_t *hash = &(hashes[gid-offset]);
 
-  sph_u32 A00 = A_init_512[0], A01 = A_init_512[1], A02 = A_init_512[2], A03 = A_init_512[3], A04 = A_init_512[4], A05 = A_init_512[5], A06 = A_init_512[6], A07 = A_init_512[7],
-  A08 = A_init_512[8], A09 = A_init_512[9], A0A = A_init_512[10], A0B = A_init_512[11];
-  sph_u32 B0 = B_init_512[0], B1 = B_init_512[1], B2 = B_init_512[2], B3 = B_init_512[3], B4 = B_init_512[4], B5 = B_init_512[5], B6 = B_init_512[6], B7 = B_init_512[7],
-  B8 = B_init_512[8], B9 = B_init_512[9], BA = B_init_512[10], BB = B_init_512[11], BC = B_init_512[12], BD = B_init_512[13], BE = B_init_512[14], BF = B_init_512[15];
-  sph_u32 C0 = C_init_512[0], C1 = C_init_512[1], C2 = C_init_512[2], C3 = C_init_512[3], C4 = C_init_512[4], C5 = C_init_512[5], C6 = C_init_512[6], C7 = C_init_512[7],
-  C8 = C_init_512[8], C9 = C_init_512[9], CA = C_init_512[10], CB = C_init_512[11], CC = C_init_512[12], CD = C_init_512[13], CE = C_init_512[14], CF = C_init_512[15];
-  sph_u32 M0, M1, M2, M3, M4, M5, M6, M7, M8, M9, MA, MB, MC, MD, ME, MF;
-  sph_u32 Wlow = 1, Whigh = 0;
-
-  M0 = block[0];
-  M1 = block[1];
-  M2 = block[2];
-  M3 = block[3];
-  M4 = block[4];
-  M5 = block[5];
-  M6 = block[6];
-  M7 = block[7];
-  M8 = block[8];
-  M9 = block[9];
-  MA = block[10];
-  MB = block[11];
-  MC = block[12];
-  MD = block[13];
-  ME = block[14];
-  MF = block[15];
-
-  INPUT_BLOCK_ADD;
-  XOR_W;
-  APPLY_P;
-  INPUT_BLOCK_SUB;
-  SWAP_BC;
-  INCR_W;
-
-  M0 = block[16];
-  M1 = block[17];
-  M2 = block[18];
-  M3 = gid;
-  M4 = 0x80;
-  M5 = M6 = M7 = M8 = M9 = MA = MB = MC = MD = ME = MF = 0;
-
-  INPUT_BLOCK_ADD;
-  XOR_W;
-  APPLY_P;
-
-  for (unsigned i = 0; i < 3; i ++) {
-    SWAP_BC;
-    XOR_W;
-    APPLY_P;
-  }
-
-  hash->h4[0] = B0;
-  hash->h4[1] = B1;
-  hash->h4[2] = B2;
-  hash->h4[3] = B3;
-  hash->h4[4] = B4;
-  hash->h4[5] = B5;
-  hash->h4[6] = B6;
-  hash->h4[7] = B7;
-  hash->h4[8] = B8;
-  hash->h4[9] = B9;
-  hash->h4[10] = BA;
-  hash->h4[11] = BB;
-  hash->h4[12] = BC;
-  hash->h4[13] = BD;
-  hash->h4[14] = BE;
-  hash->h4[15] = BF;
+	// shabal
+	uint16 A, B, C, M;
+	uint Wlow = 1;
+	
+	A.s0 = A_init_512[0];
+	A.s1 = A_init_512[1];
+	A.s2 = A_init_512[2];
+	A.s3 = A_init_512[3];
+	A.s4 = A_init_512[4];
+	A.s5 = A_init_512[5];
+	A.s6 = A_init_512[6];
+	A.s7 = A_init_512[7];
+	A.s8 = A_init_512[8];
+	A.s9 = A_init_512[9];
+	A.sa = A_init_512[10];
+	A.sb = A_init_512[11];
+	
+	B = vload16(0, B_init_512);
+	C = vload16(0, C_init_512);
+	M.s0 = block[0];
+	M.s1 = block[1];
+	M.s2 = block[2];
+	M.s3 = block[3];
+	M.s4 = block[4];
+	M.s5 = block[5];
+	M.s6 = block[6];
+	M.s7 = block[7];
+	M.s8 = block[8];
+	M.s9 = block[9];
+	M.sa = block[10];
+	M.sb = block[11];
+	M.sc = block[12];
+	M.sd = block[13];
+	M.se = block[14];
+	M.sf = block[15];
+	
+	// INPUT_BLOCK_ADD
+	B += M;
+	
+	// XOR_W
+	//do { A.s0 ^= Wlow; } while(0);
+	A.s0 ^= Wlow;
+	
+	// APPLY_P
+	B = rotate(B, 17U);
+	SHABAL_PERM_V;
+	
+	uint16 tmpC1, tmpC2, tmpC3;
+	
+	tmpC1 = shuffle2(C, (uint16)0, (uint16)(11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 17, 17, 17, 17));
+	tmpC2 = shuffle2(C, (uint16)0, (uint16)(15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 17, 17, 17, 17));
+	tmpC3 = shuffle2(C, (uint16)0, (uint16)(3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 17, 17, 17));
+	
+	A += tmpC1 + tmpC2 + tmpC3;
+		
+	// INPUT_BLOCK_SUB
+	C -= M;
+	
+	++Wlow;
+	M = 0;
+	M.s0 = block[16];
+	M.s1 = block[17];
+	M.s2 = block[18];
+	M.s3 = gid;
+	M.s4 = 0x80;
+	
+	#pragma unroll 2
+	for(int i = 0; i < 4; ++i)
+	{
+		SWAP_BC_V;
+		
+		// INPUT_BLOCK_ADD
+		B.s0 = select(B.s0, B.s0 += M.s0, i==0);
+		B.s1 = select(B.s1, B.s1 += M.s1, i==0);
+		B.s2 = select(B.s2, B.s2 += M.s2, i==0);
+		B.s3 = select(B.s3, B.s3 += M.s3, i==0);
+		B.s4 = select(B.s4, B.s4 += M.s4, i==0);
+		
+		// XOR_W;
+		A.s0 ^= Wlow;
+		
+		// APPLY_P
+		B = rotate(B, 17U);
+		SHABAL_PERM_V;
+		
+		if(i == 3) break;
+		
+		tmpC1 = shuffle2(C, (uint16)0, (uint16)(11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 17, 17, 17, 17));
+		tmpC2 = shuffle2(C, (uint16)0, (uint16)(15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 17, 17, 17, 17));
+		tmpC3 = shuffle2(C, (uint16)0, (uint16)(3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 17, 17, 17));
+	
+		A += tmpC1 + tmpC2 + tmpC3;
+	}
+	
+	vstore16(B, 0, hash->h4);
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 }

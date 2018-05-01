@@ -68,20 +68,20 @@
 
 #define SWAP_BC_V	B ^= C; C ^= B; B ^= C;
 
-__constant static const uint A_init_512_wolf[] = {
+__constant static const uint A_init_512[] = {
 	0x20728DFDU, 0x46C0BD53U, 0xE782B699U, 0x55304632U,
 	0x71B4EF90U, 0x0EA9E82CU, 0xDBB930F1U, 0xFAD06B8BU,
 	0xBE0CAE40U, 0x8BD14410U, 0x76D2ADACU, 0x28ACAB7FU
 };
 
-__constant static const uint B_init_512_wolf[] = {
+__constant static const uint B_init_512[] = {
 	0xC1099CB7U, 0x07B385F3U, 0xE7442C26U, 0xCC8AD640U,
 	0xEB6F56C7U, 0x1EA81AA9U, 0x73B9D314U, 0x1DE85D08U,
 	0x48910A5AU, 0x893B22DBU, 0xC5A0DF44U, 0xBBC4324EU,
 	0x72D2F240U, 0x75941D99U, 0x6D8BDE82U, 0xA1A7502BU
 };
 
-__constant static const uint C_init_512_wolf[] = {
+__constant static const uint C_init_512[] = {
 	0xD9BF68D1U, 0x58BAD750U, 0x56028CB2U, 0x8134F359U,
 	0xB5D469D8U, 0x941A8CC2U, 0x418B2A6EU, 0x04052780U,
 	0x7F07D787U, 0x5194358FU, 0x3C60D665U, 0xBE97D79AU,
