@@ -90,6 +90,8 @@ typedef int sph_s32;
 #endif
 #define SPH_HAMSI_EXPAND_BIG 1
 
+#pragma OPENCL EXTENSION cl_amd_media_ops2 : enable
+
 ulong FAST_ROTL64_LO(const uint2 x, const uint y) { return(as_ulong(amd_bitalign(x, x.s10, 32 - y))); }
 ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign(x.s10, x, 32 - (y - 32)))); }
 
@@ -101,12 +103,12 @@ ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign
 #include "jh.cl"
 #include "wolf-jh.cl"
 #include "keccak.cl"
-#include "skein.cl"
 #include "wolf-skein.cl"
 #include "luffa.cl"
 #include "wolf-luffa.cl"
 #include "cubehash.cl"
-#include "shavite.cl"
+#include "wolf-shavite.cl"
+#include "wolf-aes.cl"
 #include "simd.cl"
 #include "echo.cl"
 #include "wolf-echo.cl"
@@ -1448,161 +1450,245 @@ __kernel void search16(__global uint* block, __global hash_t* hashes)
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search17(__global hash_t* hashes)
 {
-  uint gid = get_global_id(0);
+	__local uint AES0[256], AES1[256], AES2[256], AES3[256];
+	
+	uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-
-  __local sph_u32 AES0[256], AES1[256], AES2[256], AES3[256];
-
-  int init = get_local_id(0);
-  int step = get_local_size(0);
-
-  for (int i = init; i < 256; i += step) {
-    AES0[i] = AES0_C[i];
-    AES1[i] = AES1_C[i];
-    AES2[i] = AES2_C[i];
-    AES3[i] = AES3_C[i];
-  }
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  // IV
-  sph_u32 h0 = SPH_C32(0x72FCCDD8), h1 = SPH_C32(0x79CA4727), h2 = SPH_C32(0x128A077B), h3 = SPH_C32(0x40D55AEC);
-  sph_u32 h4 = SPH_C32(0xD1901A06), h5 = SPH_C32(0x430AE307), h6 = SPH_C32(0xB29F5CD1), h7 = SPH_C32(0xDF07FBFC);
-  sph_u32 h8 = SPH_C32(0x8E45D73D), h9 = SPH_C32(0x681AB538), hA = SPH_C32(0xBDE86578), hB = SPH_C32(0xDD577E47);
-  sph_u32 hC = SPH_C32(0xE275EADE), hD = SPH_C32(0x502D9FCD), hE = SPH_C32(0xB9357178), hF = SPH_C32(0x022A4B9A);
-
-  // state
-  sph_u32 rk00, rk01, rk02, rk03, rk04, rk05, rk06, rk07;
-  sph_u32 rk08, rk09, rk0A, rk0B, rk0C, rk0D, rk0E, rk0F;
-  sph_u32 rk10, rk11, rk12, rk13, rk14, rk15, rk16, rk17;
-  sph_u32 rk18, rk19, rk1A, rk1B, rk1C, rk1D, rk1E, rk1F;
-
-  sph_u32 sc_count0 = (64 << 3), sc_count1 = 0, sc_count2 = 0, sc_count3 = 0;
-
-  rk00 = hash->h4[0];
-  rk01 = hash->h4[1];
-  rk02 = hash->h4[2];
-  rk03 = hash->h4[3];
-  rk04 = hash->h4[4];
-  rk05 = hash->h4[5];
-  rk06 = hash->h4[6];
-  rk07 = hash->h4[7];
-  rk08 = hash->h4[8];
-  rk09 = hash->h4[9];
-  rk0A = hash->h4[10];
-  rk0B = hash->h4[11];
-  rk0C = hash->h4[12];
-  rk0D = hash->h4[13];
-  rk0E = hash->h4[14];
-  rk0F = hash->h4[15];
-  rk10 = 0x80;
-  rk11 = rk12 = rk13 = rk14 = rk15 = rk16 = rk17 = rk18 = rk19 = rk1A = 0;
-  rk1B = 0x2000000;
-  rk1C = rk1D = rk1E = 0;
-  rk1F = 0x2000000;
-
-  c512(buf);
-
-  hash->h4[0] = h0;
-  hash->h4[1] = h1;
-  hash->h4[2] = h2;
-  hash->h4[3] = h3;
-  hash->h4[4] = h4;
-  hash->h4[5] = h5;
-  hash->h4[6] = h6;
-  hash->h4[7] = h7;
-  hash->h4[8] = h8;
-  hash->h4[9] = h9;
-  hash->h4[10] = hA;
-  hash->h4[11] = hB;
-  hash->h4[12] = hC;
-  hash->h4[13] = hD;
-  hash->h4[14] = hE;
-  hash->h4[15] = hF;
-
-  barrier(CLK_GLOBAL_MEM_FENCE);
+	
+	const int step = get_local_size(0);
+	
+	for(int i = get_local_id(0); i < 256; i += step)
+	{
+		const uint tmp = AES0_C[i];
+		AES0[i] = tmp;
+		AES1[i] = rotate(tmp, 8U);
+		AES2[i] = rotate(tmp, 16U);
+		AES3[i] = rotate(tmp, 24U);
+	}
+	
+	const uint4 h[4] = {(uint4)(0x72FCCDD8, 0x79CA4727, 0x128A077B, 0x40D55AEC), (uint4)(0xD1901A06, 0x430AE307, 0xB29F5CD1, 0xDF07FBFC), \
+						(uint4)(0x8E45D73D, 0x681AB538, 0xBDE86578, 0xDD577E47), (uint4)(0xE275EADE, 0x502D9FCD, 0xB9357178, 0x022A4B9A) };
+	
+	uint4 rk[8] = { (uint4)(0) }, p[4] = { h[0], h[1], h[2], h[3] };
+	
+	((uint16 *)rk)[0] = vload16(0, hash->h4);
+	rk[4].s0 = 0x80;
+	rk[6].s3 = 0x2000000;
+	rk[7].s3 = 0x2000000;
+	mem_fence(CLK_LOCAL_MEM_FENCE);
+	
+	#pragma unroll 1
+	for(int r = 0; r < 3; ++r)
+	{
+		if(r == 0)
+		{
+			p[0] = Shavite_AES_4Round(AES0, AES1, AES2, AES3, p[1] ^ rk[0], &(rk[1]), p[0]);
+			p[2] = Shavite_AES_4Round(AES0, AES1, AES2, AES3, p[3] ^ rk[4], &(rk[5]), p[2]);
+		}
+		#pragma unroll 1
+		for(int y = 0; y < 2; ++y)
+		{
+			rk[0] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[0], rk[7]);
+			rk[0].s03 ^= ((!y && !r) ? (uint2)(0x200, 0xFFFFFFFF) : (uint2)(0));
+			uint4 x = rk[0] ^ (y != 1 ? p[0] : p[2]);
+			rk[1] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[1], rk[0]);
+			rk[1].s3 ^= (!y && r == 1 ? 0xFFFFFDFFU : 0);	// ~(0x200)
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[1]);
+			rk[2] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[2], rk[1]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[2]);
+			rk[3] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[3], rk[2]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[3]);
+			if(y != 1) p[3] = AES_Round(AES0, AES1, AES2, AES3, x, p[3]);
+			else p[1] = AES_Round(AES0, AES1, AES2, AES3, x, p[1]);
+			
+			rk[4] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[4], rk[3]);
+			x = rk[4] ^ (y != 1 ? p[2] : p[0]);
+			rk[5] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[5], rk[4]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[5]);
+			rk[6] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[6], rk[5]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[6]);
+			rk[7] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[7], rk[6]);
+			rk[7].s23 ^= ((!y && r == 2) ? (uint2)(0x200, 0xFFFFFFFF) : (uint2)(0));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[7]);
+			if(y != 1) p[1] = AES_Round(AES0, AES1, AES2, AES3, x, p[1]);
+			else p[3] = AES_Round(AES0, AES1, AES2, AES3, x, p[3]);
+						
+			rk[0] ^= shuffle2(rk[6], rk[7], (uint4)(1, 2, 3, 4));
+			x = rk[0] ^ (!y ? p[3] : p[1]);
+			rk[1] ^= shuffle2(rk[7], rk[0], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[1]);
+			rk[2] ^= shuffle2(rk[0], rk[1], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[2]);
+			rk[3] ^= shuffle2(rk[1], rk[2], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[3]);
+			if(!y) p[2] = AES_Round(AES0, AES1, AES2, AES3, x, p[2]);
+			else p[0] = AES_Round(AES0, AES1, AES2, AES3, x, p[0]);
+					
+			rk[4] ^= shuffle2(rk[2], rk[3], (uint4)(1, 2, 3, 4));
+			x = rk[4] ^ (!y ? p[1] : p[3]);
+			rk[5] ^= shuffle2(rk[3], rk[4], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[5]);
+			rk[6] ^= shuffle2(rk[4], rk[5], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[6]);
+			rk[7] ^= shuffle2(rk[5], rk[6], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[7]);
+			if(!y) p[0] = AES_Round(AES0, AES1, AES2, AES3, x, p[0]);
+			else p[2] = AES_Round(AES0, AES1, AES2, AES3, x, p[2]);
+		}
+		if(r == 2)
+		{
+			rk[0] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[0], rk[7]);
+			uint4 x = rk[0] ^ p[0];
+			rk[1] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[1], rk[0]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[1]);
+			rk[2] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[2], rk[1]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[2]);
+			rk[3] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[3], rk[2]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[3]);
+			p[3] = AES_Round(AES0, AES1, AES2, AES3, x, p[3]);
+			
+			rk[4] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[4], rk[3]);
+			x = rk[4] ^ p[2];
+			rk[5] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[5], rk[4]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[5]);
+			rk[6] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[6], rk[5]);
+			rk[6].s13 ^= (uint2)(0x200, 0xFFFFFFFF);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[6]);
+			rk[7] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[7], rk[6]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[7]);
+			p[1] = AES_Round(AES0, AES1, AES2, AES3, x, p[1]);
+		}
+	}
+	
+	// h[0] ^ p[2], h[1] ^ p[3], h[2] ^ p[0], h[3] ^ p[1]
+	for(int i = 0; i < 4; ++i) vstore4(h[i] ^ p[(i + 2) & 3], i, hash->h4);
+	
+	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 // shavite80
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search18(__global uint* block, __global hash_t* hashes)
 {
-  uint gid = get_global_id(0);
+	__local uint AES0[256], AES1[256], AES2[256], AES3[256];
+	
+	uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-  __local sph_u32 AES0[256], AES1[256], AES2[256], AES3[256];
-
-  int init = get_local_id(0);
-  int step = get_local_size(0);
-
-  for (int i = init; i < 256; i += step) {
-    AES0[i] = AES0_C[i];
-    AES1[i] = AES1_C[i];
-    AES2[i] = AES2_C[i];
-    AES3[i] = AES3_C[i];
-  }
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  // IV
-  sph_u32 h0 = SPH_C32(0x72FCCDD8), h1 = SPH_C32(0x79CA4727), h2 = SPH_C32(0x128A077B), h3 = SPH_C32(0x40D55AEC);
-  sph_u32 h4 = SPH_C32(0xD1901A06), h5 = SPH_C32(0x430AE307), h6 = SPH_C32(0xB29F5CD1), h7 = SPH_C32(0xDF07FBFC);
-  sph_u32 h8 = SPH_C32(0x8E45D73D), h9 = SPH_C32(0x681AB538), hA = SPH_C32(0xBDE86578), hB = SPH_C32(0xDD577E47);
-  sph_u32 hC = SPH_C32(0xE275EADE), hD = SPH_C32(0x502D9FCD), hE = SPH_C32(0xB9357178), hF = SPH_C32(0x022A4B9A);
-
-  // state
-  sph_u32 rk00, rk01, rk02, rk03, rk04, rk05, rk06, rk07;
-  sph_u32 rk08, rk09, rk0A, rk0B, rk0C, rk0D, rk0E, rk0F;
-  sph_u32 rk10, rk11, rk12, rk13, rk14, rk15, rk16, rk17;
-  sph_u32 rk18, rk19, rk1A, rk1B, rk1C, rk1D, rk1E, rk1F;
-
-  sph_u32 sc_count0 = (80 << 3), sc_count1 = 0, sc_count2 = 0, sc_count3 = 0;
-
-  rk00 = block[0];
-  rk01 = block[1];
-  rk02 = block[2];
-  rk03 = block[3];
-  rk04 = block[4];
-  rk05 = block[5];
-  rk06 = block[6];
-  rk07 = block[7];
-  rk08 = block[8];
-  rk09 = block[9];
-  rk0A = block[10];
-  rk0B = block[11];
-  rk0C = block[12];
-  rk0D = block[13];
-  rk0E = block[14];
-  rk0F = block[15];
-  rk10 = block[16];
-  rk11 = block[17];
-  rk12 = block[18];
-  rk13 = gid;
-  rk14 = 0x80;
-  rk15 = rk16 = rk17 = rk18 = rk19 = rk1A = 0;
-  rk1B = 0x2800000;
-  rk1C = rk1D = rk1E = 0;
-  rk1F = 0x2000000;
-
-  c512(buf);
-
-  hash->h4[0] = h0;
-  hash->h4[1] = h1;
-  hash->h4[2] = h2;
-  hash->h4[3] = h3;
-  hash->h4[4] = h4;
-  hash->h4[5] = h5;
-  hash->h4[6] = h6;
-  hash->h4[7] = h7;
-  hash->h4[8] = h8;
-  hash->h4[9] = h9;
-  hash->h4[10] = hA;
-  hash->h4[11] = hB;
-  hash->h4[12] = hC;
-  hash->h4[13] = hD;
-  hash->h4[14] = hE;
-  hash->h4[15] = hF;
-
-  barrier(CLK_GLOBAL_MEM_FENCE);
+	
+	const int step = get_local_size(0);
+	
+	for(int i = get_local_id(0); i < 256; i += step)
+	{
+		const uint tmp = AES0_C[i];
+		AES0[i] = tmp;
+		AES1[i] = rotate(tmp, 8U);
+		AES2[i] = rotate(tmp, 16U);
+		AES3[i] = rotate(tmp, 24U);
+	}
+	
+	const uint4 h[4] = {(uint4)(0x72FCCDD8, 0x79CA4727, 0x128A077B, 0x40D55AEC), (uint4)(0xD1901A06, 0x430AE307, 0xB29F5CD1, 0xDF07FBFC), \
+						(uint4)(0x8E45D73D, 0x681AB538, 0xBDE86578, 0xDD577E47), (uint4)(0xE275EADE, 0x502D9FCD, 0xB9357178, 0x022A4B9A) };
+	
+	uint4 rk[8] = { (uint4)(0) }, p[4] = { h[0], h[1], h[2], h[3] };
+	
+	//((uint16 *)rk)[0] = vload16(0, block);
+	rk[0] = (uint4) {block[0], block[1], block[2], block[3]};
+	rk[1] = (uint4) {block[4], block[5], block[6], block[7]};
+	rk[2] = (uint4) {block[8], block[9], block[10], block[11]};
+	rk[3] = (uint4) {block[12], block[13], block[14], block[15]};
+	rk[4] = (uint4) {block[16],block[17],block[18], gid};
+	rk[5].s0 = 0x80;
+	rk[6].s3 = 0x2800000;
+	rk[7].s3 = 0x2000000;
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	#pragma unroll 1
+	for(int r = 0; r < 3; ++r)
+	{
+		if(r == 0)
+		{
+			p[0] = Shavite_AES_4Round(AES0, AES1, AES2, AES3, p[1] ^ rk[0], &(rk[1]), p[0]);
+			p[2] = Shavite_AES_4Round(AES0, AES1, AES2, AES3, p[3] ^ rk[4], &(rk[5]), p[2]);
+		}
+		#pragma unroll 1
+		for(int y = 0; y < 2; ++y)
+		{
+			rk[0] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[0], rk[7]);
+			rk[0].s03 ^= ((!y && !r) ? (uint2)(0x280, 0xFFFFFFFF) : (uint2)(0));
+			uint4 x = rk[0] ^ (y != 1 ? p[0] : p[2]);
+			rk[1] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[1], rk[0]);
+			rk[1].s3 ^= (!y && r == 1 ? ~(0x280) : 0);	// ~(0x200)
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[1]);
+			rk[2] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[2], rk[1]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[2]);
+			rk[3] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[3], rk[2]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[3]);
+			if(y != 1) p[3] = AES_Round(AES0, AES1, AES2, AES3, x, p[3]);
+			else p[1] = AES_Round(AES0, AES1, AES2, AES3, x, p[1]);
+			
+			rk[4] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[4], rk[3]);
+			x = rk[4] ^ (y != 1 ? p[2] : p[0]);
+			rk[5] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[5], rk[4]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[5]);
+			rk[6] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[6], rk[5]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[6]);
+			rk[7] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[7], rk[6]);
+			rk[7].s23 ^= ((!y && r == 2) ? (uint2)(0x280, 0xFFFFFFFF) : (uint2)(0));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[7]);
+			if(y != 1) p[1] = AES_Round(AES0, AES1, AES2, AES3, x, p[1]);
+			else p[3] = AES_Round(AES0, AES1, AES2, AES3, x, p[3]);
+						
+			rk[0] ^= shuffle2(rk[6], rk[7], (uint4)(1, 2, 3, 4));
+			x = rk[0] ^ (!y ? p[3] : p[1]);
+			rk[1] ^= shuffle2(rk[7], rk[0], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[1]);
+			rk[2] ^= shuffle2(rk[0], rk[1], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[2]);
+			rk[3] ^= shuffle2(rk[1], rk[2], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[3]);
+			if(!y) p[2] = AES_Round(AES0, AES1, AES2, AES3, x, p[2]);
+			else p[0] = AES_Round(AES0, AES1, AES2, AES3, x, p[0]);
+					
+			rk[4] ^= shuffle2(rk[2], rk[3], (uint4)(1, 2, 3, 4));
+			x = rk[4] ^ (!y ? p[1] : p[3]);
+			rk[5] ^= shuffle2(rk[3], rk[4], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[5]);
+			rk[6] ^= shuffle2(rk[4], rk[5], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[6]);
+			rk[7] ^= shuffle2(rk[5], rk[6], (uint4)(1, 2, 3, 4));
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[7]);
+			if(!y) p[0] = AES_Round(AES0, AES1, AES2, AES3, x, p[0]);
+			else p[2] = AES_Round(AES0, AES1, AES2, AES3, x, p[2]);
+		}
+		if(r == 2)
+		{
+			rk[0] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[0], rk[7]);
+			uint4 x = rk[0] ^ p[0];
+			rk[1] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[1], rk[0]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[1]);
+			rk[2] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[2], rk[1]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[2]);
+			rk[3] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[3], rk[2]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[3]);
+			p[3] = AES_Round(AES0, AES1, AES2, AES3, x, p[3]);
+			
+			rk[4] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[4], rk[3]);
+			x = rk[4] ^ p[2];
+			rk[5] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[5], rk[4]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[5]);
+			rk[6] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[6], rk[5]);
+			rk[6].s13 ^= (uint2)(0x280, 0xFFFFFFFF);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[6]);
+			rk[7] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[7], rk[6]);
+			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[7]);
+			p[1] = AES_Round(AES0, AES1, AES2, AES3, x, p[1]);
+		}
+	}
+	
+	// h[0] ^ p[2], h[1] ^ p[3], h[2] ^ p[0], h[3] ^ p[1]
+	for(int i = 0; i < 4; ++i) vstore4(h[i] ^ p[(i + 2) & 3], i, hash->h4);
+	
+	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 // simd64

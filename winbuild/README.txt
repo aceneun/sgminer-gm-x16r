@@ -1,7 +1,7 @@
 Tools needed
 ------------
 1. Windows 10
-2. Visual Studio C++ 2013 Express 
+2. Visual Studio C++ 2017
 3. Windows 7.1 SDK - http://www.microsoft.com/en-us/download/details.aspx?id=8279
 
 If you intend to build for native x64, then instead of using <Visual Studio Command Prompt>, you will need to use
