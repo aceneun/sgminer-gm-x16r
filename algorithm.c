@@ -45,6 +45,7 @@
 #include "algorithm/ethash.h"
 #include "algorithm/cryptonight.h"
 #include "algorithm/equihash.h"
+#include "algorithm/x17.h"
 
 #include "compat.h"
 
@@ -62,6 +63,7 @@ const char *algorithm_type_str[] = {
   "X15",
   "X16R",
   "X16S",
+  "X17",
   "Xevan",
   "Keccak",
   "Quarkcoin",
@@ -921,6 +923,62 @@ static cl_int queue_x16s_kernel(struct __clState *clState, struct _dev_blk_ctx *
   return status;
 }
 
+static cl_int queue_x17_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+  cl_kernel *kernel;
+  unsigned int num;
+  cl_ulong le_target;
+  cl_int status = 0;
+
+  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  flip80(clState->cldata, blk->work->data);
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
+
+  // blake - search
+  kernel = &clState->kernel;
+  num = 0;
+  CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(clState->padbuffer8);
+  // bmw - search1
+  kernel = clState->extra_kernels;
+  CL_SET_ARG_0(clState->padbuffer8);
+  // groestl - search2
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // skein - search3
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // jh - search4
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // keccak - search5
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // luffa - search6
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // cubehash - search7
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shavite - search8
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // simd - search9
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // echo - search10
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // hamsi - search11
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // fugue - search12
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shabal - search13
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // whirlpool - search14
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // sha - search15
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // haval - search16
+  num = 0;
+  CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+  CL_SET_ARG(clState->outputBuffer);
+  CL_SET_ARG(le_target);
+
+  return status;
+}
+
 static cl_int enqueue_x16r_kernels(struct __clState *clState,
                                    size_t *p_global_work_offset, size_t *globalThreads, size_t *localThreads)
 {
@@ -1564,6 +1622,7 @@ static algorithm_settings_t algos[] = {
 
   { "x16r", ALGO_X16R, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16r_regenhash, NULL, queue_x16r_kernel, gen_hash, append_x13_compiler_options, enqueue_x16r_kernels },
   { "x16s", ALGO_X16S, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16s_regenhash, NULL, queue_x16s_kernel, gen_hash, append_x13_compiler_options, enqueue_x16s_kernels },
+  { "x17", ALGO_X17, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 16,  8 * 16 * 4194304, 0, x17_regenhash, NULL, queue_x17_kernel, gen_hash, append_x13_compiler_options},
 
   { "talkcoin-mod", ALGO_NIST, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 8 * 16 * 4194304, 0, talkcoin_regenhash, NULL, queue_talkcoin_mod_kernel, gen_hash, append_x11_compiler_options },
 

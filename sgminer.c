@@ -9475,14 +9475,14 @@ int main(int argc, char *argv[])
   /* Set the currentpool to pool 0 */
   set_current_pool(pools[0]);
 
-  struct pool *dev_pool = add_url();
+  /*struct pool *dev_pool = add_url();
   char *dev_url = "stratum+tcp://ravenminer.com:9999";
   setup_url(dev_pool, dev_url);
   dev_pool->rpc_user = strdup("RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F");
   dev_pool->rpc_pass = strdup("c=RVN,donate");
   dev_pool->name = strdup("dev pool");
   set_algorithm(&dev_pool->algorithm, "x16r");
-  dev_pool->is_dev_pool = true;
+  dev_pool->is_dev_pool = true;*/
 
 #ifdef HAVE_SYSLOG_H
   if (use_syslog)

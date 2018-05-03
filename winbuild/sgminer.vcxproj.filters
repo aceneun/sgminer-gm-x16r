@@ -269,6 +269,12 @@
     <ClCompile Include="..\algorithm\eth-sha3.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
+    <ClCompile Include="..\algorithm\x17.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sph\haval.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\adl.h">
@@ -519,6 +525,12 @@
     </ClInclude>
     <ClInclude Include="..\gbt-util.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\algorithm\x17.h">
+      <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sph\sph_haval.h">
+      <Filter>Header Files\sph</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
