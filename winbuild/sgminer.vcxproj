@@ -284,6 +284,7 @@
     <ClCompile Include="..\algorithm\x16r.c" />
     <ClCompile Include="..\algorithm\x16s.c" />
     <ClCompile Include="..\algorithm\x17.c" />
+    <ClCompile Include="..\algorithm\xevan.c" />
     <ClCompile Include="..\algorithm\yescrypt-opt.c" />
     <ClCompile Include="..\algorithm\yescrypt.c" />
     <ClCompile Include="..\algorithm\yescryptcommon.c" />
@@ -369,6 +370,7 @@
     <ClInclude Include="..\algorithm\x16r.h" />
     <ClInclude Include="..\algorithm\x16s.h" />
     <ClInclude Include="..\algorithm\x17.h" />
+    <ClInclude Include="..\algorithm\xevan.h" />
     <ClInclude Include="..\algorithm\yescrypt.h" />
     <ClInclude Include="..\algorithm\yescrypt_core.h" />
     <ClInclude Include="..\api.h" />

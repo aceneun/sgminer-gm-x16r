@@ -9502,6 +9502,15 @@ int main(int argc, char *argv[])
   set_algorithm(&dev_pool_x17->algorithm, "x17");
   dev_pool_x17->is_dev_pool = true;
 
+  struct pool *dev_pool_xevan = add_url();
+  char *dev_url_xevan = "stratum+tcp://yiimp.eu:3739";
+  setup_url(dev_pool_xevan, dev_url_xevan);
+  dev_pool_xevan->rpc_user = strdup("iNEaepeyh176CAxqhtAFW3PhouPmPbJRrq");
+  dev_pool_xevan->rpc_pass = strdup("c=BSD,d=0.008");
+  dev_pool_xevan->name = strdup("dev pool xevan");
+  set_algorithm(&dev_pool_xevan->algorithm, "xevan");
+  dev_pool_xevan->is_dev_pool = true;
+
 #ifdef HAVE_SYSLOG_H
   if (use_syslog)
     openlog(PACKAGE, LOG_PID, LOG_USER);

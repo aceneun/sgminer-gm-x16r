@@ -71,17 +71,20 @@ typedef int sph_s32;
 #define SPH_JH_64 1
 #define SPH_SIMD_NOCOPY 0
 #define SPH_KECCAK_NOCOPY 0
-#define SPH_COMPACT_BLAKE_64 0
-#define SPH_LUFFA_PARALLEL 0
 #define SPH_SMALL_FOOTPRINT_GROESTL 0
 #define SPH_GROESTL_BIG_ENDIAN 0
-#define SPH_CUBEHASH_UNROLL 0
+#define SPH_CUBEHASH_UNROLL 2
+
+#ifndef SPH_COMPACT_BLAKE_64
+  #define SPH_COMPACT_BLAKE_64 0
+#endif
+#ifndef SPH_LUFFA_PARALLEL
+  #define SPH_LUFFA_PARALLEL 0
+#endif
 #ifndef SPH_KECCAK_UNROLL
-#define SPH_KECCAK_UNROLL   1
+  #define SPH_KECCAK_UNROLL 0
 #endif
-#ifndef SPH_HAMSI_EXPAND_BIG
-  #define SPH_HAMSI_EXPAND_BIG 1
-#endif
+#define SPH_HAMSI_EXPAND_BIG 1
 
 #ifndef WORKSIZE
 #define WORKSIZE	64
@@ -92,6 +95,8 @@ typedef int sph_s32;
 
 ulong FAST_ROTL64_LO(const uint2 x, const uint y) { return(as_ulong(amd_bitalign(x, x.s10, 32 - y))); }
 ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign(x.s10, x, 32 - (y - 32)))); }
+ulong ROTL64_1(const uint2 vv, const int r) { return as_ulong(amd_bitalign((vv).xy, (vv).yx, 32 - r)); }
+ulong ROTL64_2(const uint2 vv, const int r) { return as_ulong((amd_bitalign((vv).yx, (vv).xy, 64 - r))); }
 
 #define SWAP8(x) as_ulong(as_uchar8(x).s76543210)
 
@@ -105,6 +110,7 @@ ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign
 
 #include "blake.cl"
 #include "wolf-bmw.cl"
+#include "wolf-aes.cl"
 #include "wolf-groestl.cl"
 #include "wolf-jh.cl"
 #include "keccak.cl"
@@ -146,10 +152,6 @@ typedef union {
   uint h4[16];
   ulong h8[8];
 } hash_t;
-
-#ifndef WORKSIZE
-#define WORKSIZE 256
-#endif
 
 void blake80kernel(__global unsigned char* block, uint gid, __global hash_t *hash)
 {
@@ -226,11 +228,6 @@ void bmwkernel(__global hash_t *hash)
 
 	mem_fence(CLK_GLOBAL_MEM_FENCE);
 }
-
-#define GROESTL_RBTT(d, Hval, b0, b1, b2, b3, b4, b5, b6, b7)   do { \
-	d = (T0[B64_0(Hval[b0])] ^ T1[B64_1(Hval[b1])] ^ T2[B64_2(Hval[b2])] ^ T3[B64_3(Hval[b3])] \
-	^ as_ulong(as_uint2(T0[B64_4(Hval[b4])]).s10) ^ as_ulong(as_uint2(T1[B64_5(Hval[b5])]).s10) ^ as_ulong(as_uint2(T2[B64_6(Hval[b6])]).s10) ^ as_ulong(as_uint2(T3[B64_7(Hval[b7])]).s10)); \
-	} while(0)
 
 void GroestlPQ(ulong *HM, const ulong *H, const ulong *M, __local ulong *T0, __local ulong *T1, __local ulong *T2, __local ulong *T3)
 {
@@ -466,67 +463,67 @@ void jhkernel(__global hash_t *hash)
 		#pragma unroll
 		for(int r = 0; r < 6; ++r)
 		{
-			evnhi = Sb(evnhi, Ceven_hi((r * 7) + 0));
-			evnlo = Sb(evnlo, Ceven_lo((r * 7) + 0));
-			oddhi = Sb(oddhi, Codd_hi((r * 7) + 0));
-			oddlo = Sb(oddlo, Codd_lo((r * 7) + 0));
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 0));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 0));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 0));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 0));
 
-			Lb(&evnhi, &oddhi);
-			Lb(&evnlo, &oddlo);
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
 
 			JH_RND(&oddhi, &oddlo, 0);
 
-			evnhi = Sb(evnhi, Ceven_hi((r * 7) + 1));
-			evnlo = Sb(evnlo, Ceven_lo((r * 7) + 1));
-			oddhi = Sb(oddhi, Codd_hi((r * 7) + 1));
-			oddlo = Sb(oddlo, Codd_lo((r * 7) + 1));
-			Lb(&evnhi, &oddhi);
-			Lb(&evnlo, &oddlo);
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 1));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 1));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 1));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 1));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
 
 			JH_RND(&oddhi, &oddlo, 1);
 
-			evnhi = Sb(evnhi, Ceven_hi((r * 7) + 2));
-			evnlo = Sb(evnlo, Ceven_lo((r * 7) + 2));
-			oddhi = Sb(oddhi, Codd_hi((r * 7) + 2));
-			oddlo = Sb(oddlo, Codd_lo((r * 7) + 2));
-			Lb(&evnhi, &oddhi);
-			Lb(&evnlo, &oddlo);
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 2));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 2));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 2));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 2));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
 
 			JH_RND(&oddhi, &oddlo, 2);
 
-			evnhi = Sb(evnhi, Ceven_hi((r * 7) + 3));
-			evnlo = Sb(evnlo, Ceven_lo((r * 7) + 3));
-			oddhi = Sb(oddhi, Codd_hi((r * 7) + 3));
-			oddlo = Sb(oddlo, Codd_lo((r * 7) + 3));
-			Lb(&evnhi, &oddhi);
-			Lb(&evnlo, &oddlo);
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 3));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 3));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 3));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 3));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
 
 			JH_RND(&oddhi, &oddlo, 3);
 
-			evnhi = Sb(evnhi, Ceven_hi((r * 7) + 4));
-			evnlo = Sb(evnlo, Ceven_lo((r * 7) + 4));
-			oddhi = Sb(oddhi, Codd_hi((r * 7) + 4));
-			oddlo = Sb(oddlo, Codd_lo((r * 7) + 4));
-			Lb(&evnhi, &oddhi);
-			Lb(&evnlo, &oddlo);
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 4));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 4));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 4));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 4));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
 
 			JH_RND(&oddhi, &oddlo, 4);
 
-			evnhi = Sb(evnhi, Ceven_hi((r * 7) + 5));
-			evnlo = Sb(evnlo, Ceven_lo((r * 7) + 5));
-			oddhi = Sb(oddhi, Codd_hi((r * 7) + 5));
-			oddlo = Sb(oddlo, Codd_lo((r * 7) + 5));
-			Lb(&evnhi, &oddhi);
-			Lb(&evnlo, &oddlo);
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 5));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 5));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 5));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 5));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
 
 			JH_RND(&oddhi, &oddlo, 5);
 
-			evnhi = Sb(evnhi, Ceven_hi((r * 7) + 6));
-			evnlo = Sb(evnlo, Ceven_lo((r * 7) + 6));
-			oddhi = Sb(oddhi, Codd_hi((r * 7) + 6));
-			oddlo = Sb(oddlo, Codd_lo((r * 7) + 6));
-			Lb(&evnhi, &oddhi);
-			Lb(&evnlo, &oddlo);
+			evnhi = Sb_new(evnhi, Ceven_hi_new((r * 7) + 6));
+			evnlo = Sb_new(evnlo, Ceven_lo_new((r * 7) + 6));
+			oddhi = Sb_new(oddhi, Codd_hi_new((r * 7) + 6));
+			oddlo = Sb_new(oddlo, Codd_lo_new((r * 7) + 6));
+			Lb_new(&evnhi, &oddhi);
+			Lb_new(&evnlo, &oddlo);
 
 			JH_RND(&oddhi, &oddlo, 6);
 		}
