@@ -61,6 +61,9 @@ typedef int sph_s32;
 #define SPH_ROTL32(x, n) rotate(as_uint(x), as_uint(n))
 #define SPH_ROTR32(x, n)   SPH_ROTL32(x, (32 - (n)))
 
+#define SPH_C64(x)    ((sph_u64)(x ## UL))
+#define SPH_T64(x) (as_ulong(x))
+
 #define SPH_ECHO_64 1
 #define SPH_KECCAK_64 1
 #define SPH_JH_64 1

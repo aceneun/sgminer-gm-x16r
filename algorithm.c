@@ -1724,6 +1724,9 @@ static const char *lookup_algorithm_alias(const char *lookup_alias, uint8_t *nfa
   ALGO_ALIAS("x15", "bitblock");
   ALGO_ALIAS("x15modold", "bitblockold");
   ALGO_ALIAS("x15old", "bitblockold");
+  ALGO_ALIAS("x16r", "x16r");
+  ALGO_ALIAS("x16s", "x16s");
+  ALGO_ALIAS("x17", "x17");
   ALGO_ALIAS("nist5", "talkcoin-mod");
   ALGO_ALIAS("keccak", "maxcoin");
   ALGO_ALIAS("whirlpool", "whirlcoin");
