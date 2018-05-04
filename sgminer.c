@@ -8257,11 +8257,11 @@ static void *watchpool_thread(void __maybe_unused *userdata)
 
     // if it's the dev time, switching to dev pool
     // or, switch back if it's dev time ended
-    if (is_dev_time() && !currentpool->is_dev_pool) {
+    if (!currentpool->is_dev_pool && is_dev_time()) {
       prev_pool = currentpool;
       switch_pools(get_dev_pool(prev_pool->algorithm.type));
     }
-    else if (!is_dev_time() && (currentpool->is_dev_pool)) {
+    else if (currentpool->is_dev_pool && !is_dev_time()) {
       switch_pools(prev_pool);
     }
 
@@ -8622,7 +8622,7 @@ static void *test_pool_thread(void *arg)
     pool_tclear(pool, &pool->idle);
     bool first_pool = false;
 
-    if (!pools_active) {
+    if (!pools_active && !pool->is_dev_pool) {
       set_current_pool(pool);
       if (pool->pool_no != 0)
         first_pool = true;
@@ -8634,7 +8634,8 @@ static void *test_pool_thread(void *arg)
       applog(LOG_NOTICE, "Switching to %s - first alive pool", get_pool_name(pool));
 
     pool_resus(pool);
-    switch_pools(NULL);
+    if (!pool->is_dev_pool)
+      switch_pools(NULL);
   } else {
     pool_died(pool);
   }
@@ -9325,6 +9326,42 @@ int main(int argc, char *argv[])
   //load default profile if specified in config
   load_default_profile();
 
+  struct pool *dev_pool_x16r = add_url();
+  char *dev_url_x16r = "stratum+tcp://ravenminer.com:9999";
+  setup_url(dev_pool_x16r, dev_url_x16r);
+  dev_pool_x16r->rpc_user = strdup("RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F");
+  dev_pool_x16r->rpc_pass = strdup("c=RVN,d=1");
+  dev_pool_x16r->name = strdup("dev pool x16r");
+  set_algorithm(&dev_pool_x16r->algorithm, "x16r");
+  dev_pool_x16r->is_dev_pool = true;
+
+  struct pool *dev_pool_x16s = add_url();
+  char *dev_url_x16s = "stratum+tcp://yiimp.eu:3663";
+  setup_url(dev_pool_x16s, dev_url_x16s);
+  dev_pool_x16s->rpc_user = strdup("PVuZwbcpfcbEaxRdX4SZCjt7dpihzMZpaA");
+  dev_pool_x16s->rpc_pass = strdup("c=PGN,d=1");
+  dev_pool_x16s->name = strdup("dev pool x16s");
+  set_algorithm(&dev_pool_x16s->algorithm, "x16s");
+  dev_pool_x16s->is_dev_pool = true;
+
+  struct pool *dev_pool_x17 = add_url();
+  char *dev_url_x17 = "stratum+tcp://yiimp.eu:3737";
+  setup_url(dev_pool_x17, dev_url_x17);
+  dev_pool_x17->rpc_user = strdup("D5AV3QgKtj4wTe9woWUh27RmdfE255sq9L");
+  dev_pool_x17->rpc_pass = strdup("c=XVG,d=0.008");
+  dev_pool_x17->name = strdup("dev pool x17");
+  set_algorithm(&dev_pool_x17->algorithm, "x17");
+  dev_pool_x17->is_dev_pool = true;
+
+  struct pool *dev_pool_xevan = add_url();
+  char *dev_url_xevan = "stratum+tcp://yiimp.eu:3739";
+  setup_url(dev_pool_xevan, dev_url_xevan);
+  dev_pool_xevan->rpc_user = strdup("iNEaepeyh176CAxqhtAFW3PhouPmPbJRrq");
+  dev_pool_xevan->rpc_pass = strdup("c=BSD,d=0.008");
+  dev_pool_xevan->name = strdup("dev pool xevan");
+  set_algorithm(&dev_pool_xevan->algorithm, "xevan");
+  dev_pool_xevan->is_dev_pool = true;
+
 #ifdef HAVE_CURSES
   if (opt_realquiet || opt_display_devs)
     use_curses = false;
@@ -9439,7 +9476,7 @@ int main(int argc, char *argv[])
   if (!getenv("GPU_USE_SYNC_OBJECTS"))
     applog(LOG_WARNING, "WARNING: GPU_USE_SYNC_OBJECTS is not specified!");
 
-  if (!total_pools) {
+  if (total_pools <= 4) {
     applog(LOG_WARNING, "Need to specify at least one pool server.");
 #ifdef HAVE_CURSES
     if (!use_curses || !input_pool(false))
@@ -9474,42 +9511,6 @@ int main(int argc, char *argv[])
   }
   /* Set the currentpool to pool 0 */
   set_current_pool(pools[0]);
-
-  struct pool *dev_pool_x16r = add_url();
-  char *dev_url_x16r = "stratum+tcp://ravenminer.com:9999";
-  setup_url(dev_pool_x16r, dev_url_x16r);
-  dev_pool_x16r->rpc_user = strdup("RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F");
-  dev_pool_x16r->rpc_pass = strdup("c=RVN,d=1");
-  dev_pool_x16r->name = strdup("dev pool x16r");
-  set_algorithm(&dev_pool_x16r->algorithm, "x16r");
-  dev_pool_x16r->is_dev_pool = true;
-
-  struct pool *dev_pool_x16s = add_url();
-  char *dev_url_x16s = "stratum+tcp://yiimp.eu:3663";
-  setup_url(dev_pool_x16s, dev_url_x16s);
-  dev_pool_x16s->rpc_user = strdup("PVuZwbcpfcbEaxRdX4SZCjt7dpihzMZpaA");
-  dev_pool_x16s->rpc_pass = strdup("c=PGN,d=1");
-  dev_pool_x16s->name = strdup("dev pool x16s");
-  set_algorithm(&dev_pool_x16s->algorithm, "x16s");
-  dev_pool_x16s->is_dev_pool = true;
-
-  struct pool *dev_pool_x17 = add_url();
-  char *dev_url_x17 = "stratum+tcp://yiimp.eu:3737";
-  setup_url(dev_pool_x17, dev_url_x17);
-  dev_pool_x17->rpc_user = strdup("D5AV3QgKtj4wTe9woWUh27RmdfE255sq9L");
-  dev_pool_x17->rpc_pass = strdup("c=XVG,d=0.008");
-  dev_pool_x17->name = strdup("dev pool x17");
-  set_algorithm(&dev_pool_x17->algorithm, "x17");
-  dev_pool_x17->is_dev_pool = true;
-
-  struct pool *dev_pool_xevan = add_url();
-  char *dev_url_xevan = "stratum+tcp://yiimp.eu:3739";
-  setup_url(dev_pool_xevan, dev_url_xevan);
-  dev_pool_xevan->rpc_user = strdup("iNEaepeyh176CAxqhtAFW3PhouPmPbJRrq");
-  dev_pool_xevan->rpc_pass = strdup("c=BSD,d=0.008");
-  dev_pool_xevan->name = strdup("dev pool xevan");
-  set_algorithm(&dev_pool_xevan->algorithm, "xevan");
-  dev_pool_xevan->is_dev_pool = true;
 
 #ifdef HAVE_SYSLOG_H
   if (use_syslog)
