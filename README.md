@@ -1,40 +1,28 @@
-# Avermore miner
+# sgminer-kl x16r/x16s/x17 miner
 
 
 ## Introduction
 
-Quoth the Raven(coin), "Nevermore." But it's for AMD, so let's call it Avermore.
+An optimized fork of sgminer developed specially for x16r by brianmct, based on Avermore miner.
 
-An optimized fork of sgminer developed specially for x16r by brianmct (brian112358 on GitHub).
+For now support x16r, x16s, x17 algos
 
 This is a multi-threaded multi-pool GPU miner with AMD GPU monitoring,
 (over)clocking and fanspeed support for scrypt-based cryptocurrency. It is
 based on cgminer by Con Kolivas (ckolivas), which is in turn based on
 cpuminer by Jeff Garzik (jgarzik).
 
-**releases**: https://github.com/brian112358/avermore-miner/releases
+**releases**: https://github.com/KL0nLutiy/sgminer-kl/releases
 
-**git tree**: https://github.com/brian112358/avermore-miner
+**git tree**: https://github.com/KL0nLutiy/sgminer-kl
 
-**bugtracker**: https://github.com/brian112358/avermore-miner/issues
-
-**Ravencoin Discord server**: https://discord.gg/MZKpf5Z
+**bugtracker**: https://github.com/KL0nLutiy/sgminer-kl/issues
 
 ## Donation addresses
 
-Please consider supporting this project by donating to these addresses (brianmct):
-
-**BTC**: 1FHLroBZaB74QvQW5mBmAxCNVJNXa14mH5
-
-**RVN**: RWoSZX6j6WU6SVTVq5hKmdgPmmrYE9be5R
-
-**PGN**: PKvGAk3qEQYy4i4uEmiiD33BytSm6xU8DT
-
-**ETH**: 0x7255ba772ee18bdb8b9af0bdeae2e41f5874fb0b
-
-**DOGE**: D7h81HeRVV3xPWL9CqCC2Z6AevG4gBdGxZ
-
 Please consider supporting this project by donating to these addresses (KL0nLutiy):
+
+**ETH**: 0x24366CC7Dd15e6E37C2692eE871803B8983738E6
 
 **RVN**: RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F
 
