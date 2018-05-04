@@ -67,8 +67,6 @@ typedef int sph_s32;
 
 #define SPH_C64(x)    ((sph_u64)(x ## UL))
 #define SPH_T64(x) (as_ulong(x))
-#define SPH_ROTL64(x, n) rotate(as_ulong(x), (n) & 0xFFFFFFFFFFFFFFFFUL)
-#define SPH_ROTR64(x, n)   SPH_ROTL64(x, (64 - (n)))
 
 #define SPH_ECHO_64 1
 #define SPH_KECCAK_64 1
@@ -90,10 +88,13 @@ typedef int sph_s32;
 #endif
 #define SPH_HAMSI_EXPAND_BIG 1
 
+#pragma OPENCL EXTENSION cl_amd_media_ops : enable
 #pragma OPENCL EXTENSION cl_amd_media_ops2 : enable
 
 ulong FAST_ROTL64_LO(const uint2 x, const uint y) { return(as_ulong(amd_bitalign(x, x.s10, 32 - y))); }
 ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign(x.s10, x, 32 - (y - 32)))); }
+ulong ROTL64_1(const uint2 vv, const int r) { return as_ulong(amd_bitalign((vv).xy, (vv).yx, 32 - r)); }
+ulong ROTL64_2(const uint2 vv, const int r) { return as_ulong((amd_bitalign((vv).yx, (vv).xy, 64 - r))); }
 
 #define WOLF_JH_64BIT 1
 
@@ -138,11 +139,6 @@ ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign
 
 #define SHL(x, n) ((x) << (n))
 #define SHR(x, n) ((x) >> (n))
-
-#define CONST_EXP2  q[i+0] + SPH_ROTL64(q[i+1], 5)  + q[i+2] + SPH_ROTL64(q[i+3], 11) + \
-                    q[i+4] + SPH_ROTL64(q[i+5], 27) + q[i+6] + SPH_ROTL64(q[i+7], 32) + \
-                    q[i+8] + SPH_ROTL64(q[i+9], 37) + q[i+10] + SPH_ROTL64(q[i+11], 43) + \
-                    q[i+12] + SPH_ROTL64(q[i+13], 53) + (SHR(q[i+14],1) ^ q[i+14]) + (SHR(q[i+15],2) ^ q[i+15])
 
 typedef union {
   unsigned char h1[64];
@@ -1617,7 +1613,7 @@ __kernel void search18(__global uint* block, __global hash_t* hashes)
 			rk[0].s03 ^= ((!y && !r) ? (uint2)(0x280, 0xFFFFFFFF) : (uint2)(0));
 			uint4 x = rk[0] ^ (y != 1 ? p[0] : p[2]);
 			rk[1] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[1], rk[0]);
-			rk[1].s3 ^= (!y && r == 1 ? ~(0x280) : 0);	// ~(0x200)
+			rk[1].s3 ^= (!y && r == 1 ? ~(0x280) : 0);
 			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[1]);
 			rk[2] = Shavite_Key_Expand(AES0, AES1, AES2, AES3, rk[2], rk[1]);
 			x = AES_Round(AES0, AES1, AES2, AES3, x, rk[2]);

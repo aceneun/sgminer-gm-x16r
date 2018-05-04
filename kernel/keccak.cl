@@ -111,7 +111,8 @@ __constant static const sph_u64 RC[] = {
 #define AND64(d, a, b)   (d = a & b)
 #define OR64(d, a, b)    (d = a | b)
 #define NOT64(d, s)      (d = SPH_T64(~s))
-#define ROL64(d, v, n)   (d = SPH_ROTL64(v, n))
+#define ROL64_1(d, v, n)   (d = ROTL64_1(as_uint2(v), n))
+#define ROL64_2(d, v, n)   (d = ROTL64_2(as_uint2(v), n))
 #define XOR64_IOTA       XOR64
 
 #define TH_ELT(t, c0, c1, c2, c3, c4, d0, d1, d2, d3, d4)   do { \
@@ -123,7 +124,7 @@ __constant static const sph_u64 RC[] = {
     XOR64(tt1, d2, d3); \
     XOR64(tt0, tt0, d4); \
     XOR64(tt0, tt0, tt1); \
-    ROL64(tt0, tt0, 1); \
+    ROL64_1(tt0, tt0, 1); \
     XOR64(tt2, c0, c1); \
     XOR64(tt3, c2, c3); \
     XOR64(tt0, tt0, c4); \
@@ -177,30 +178,30 @@ __constant static const sph_u64 RC[] = {
   b40, b41, b42, b43, b44) \
   do { \
     /* ROL64(b00, b00,  0); */ \
-    ROL64(b01, b01, 36); \
-    ROL64(b02, b02,  3); \
-    ROL64(b03, b03, 41); \
-    ROL64(b04, b04, 18); \
-    ROL64(b10, b10,  1); \
-    ROL64(b11, b11, 44); \
-    ROL64(b12, b12, 10); \
-    ROL64(b13, b13, 45); \
-    ROL64(b14, b14,  2); \
-    ROL64(b20, b20, 62); \
-    ROL64(b21, b21,  6); \
-    ROL64(b22, b22, 43); \
-    ROL64(b23, b23, 15); \
-    ROL64(b24, b24, 61); \
-    ROL64(b30, b30, 28); \
-    ROL64(b31, b31, 55); \
-    ROL64(b32, b32, 25); \
-    ROL64(b33, b33, 21); \
-    ROL64(b34, b34, 56); \
-    ROL64(b40, b40, 27); \
-    ROL64(b41, b41, 20); \
-    ROL64(b42, b42, 39); \
-    ROL64(b43, b43,  8); \
-    ROL64(b44, b44, 14); \
+    ROL64_2(b01, b01, 36); \
+    ROL64_1(b02, b02,  3); \
+    ROL64_2(b03, b03, 41); \
+    ROL64_1(b04, b04, 18); \
+    ROL64_1(b10, b10,  1); \
+    ROL64_2(b11, b11, 44); \
+    ROL64_1(b12, b12, 10); \
+    ROL64_2(b13, b13, 45); \
+    ROL64_1(b14, b14,  2); \
+    ROL64_2(b20, b20, 62); \
+    ROL64_1(b21, b21,  6); \
+    ROL64_2(b22, b22, 43); \
+    ROL64_1(b23, b23, 15); \
+    ROL64_2(b24, b24, 61); \
+    ROL64_1(b30, b30, 28); \
+    ROL64_2(b31, b31, 55); \
+    ROL64_1(b32, b32, 25); \
+    ROL64_1(b33, b33, 21); \
+    ROL64_2(b34, b34, 56); \
+    ROL64_1(b40, b40, 27); \
+    ROL64_1(b41, b41, 20); \
+    ROL64_2(b42, b42, 39); \
+    ROL64_1(b43, b43,  8); \
+    ROL64_1(b44, b44, 14); \
   } while (0)
 
 /*

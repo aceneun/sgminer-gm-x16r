@@ -61,11 +61,6 @@ typedef int sph_s32;
 #define SPH_ROTL32(x, n) rotate(as_uint(x), as_uint(n))
 #define SPH_ROTR32(x, n)   SPH_ROTL32(x, (32 - (n)))
 
-#define SPH_C64(x)    ((sph_u64)(x ## UL))
-#define SPH_T64(x) (as_ulong(x))
-#define SPH_ROTL64(x, n) rotate(as_ulong(x), (n) & 0xFFFFFFFFFFFFFFFFUL)
-#define SPH_ROTR64(x, n)   SPH_ROTL64(x, (64 - (n)))
-
 #define SPH_ECHO_64 1
 #define SPH_KECCAK_64 1
 #define SPH_JH_64 1
@@ -92,6 +87,8 @@ typedef int sph_s32;
 
 ulong FAST_ROTL64_LO(const uint2 x, const uint y) { return(as_ulong(amd_bitalign(x, x.s10, 32 - y))); }
 ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign(x.s10, x, 32 - (y - 32)))); }
+ulong ROTL64_1(const uint2 vv, const int r) { return as_ulong(amd_bitalign((vv).xy, (vv).yx, 32 - r)); }
+ulong ROTL64_2(const uint2 vv, const int r) { return as_ulong((amd_bitalign((vv).yx, (vv).xy, 64 - r))); }
 
 #define SWAP8(x) as_ulong(as_uchar8(x).s76543210)
 
@@ -102,7 +99,7 @@ ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign
 #define WOLF_JH_64BIT 1
 
 #include "wolf-aes.cl"
-#include "blake.cl"
+#include "wolf-blake.cl"
 #include "wolf-bmw.cl"
 #include "pallas-groestl.cl"
 #include "wolf-jh.cl"
@@ -141,11 +138,6 @@ ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign
 #define SHL(x, n) ((x) << (n))
 #define SHR(x, n) ((x) >> (n))
 
-#define CONST_EXP2  q[i+0] + SPH_ROTL64(q[i+1], 5)  + q[i+2] + SPH_ROTL64(q[i+3], 11) + \
-                    q[i+4] + SPH_ROTL64(q[i+5], 27) + q[i+6] + SPH_ROTL64(q[i+7], 32) + \
-                    q[i+8] + SPH_ROTL64(q[i+9], 37) + q[i+10] + SPH_ROTL64(q[i+11], 43) + \
-                    q[i+12] + SPH_ROTL64(q[i+13], 53) + (SHR(q[i+14],1) ^ q[i+14]) + (SHR(q[i+15],2) ^ q[i+15])
-
 typedef union {
   unsigned char h1[64];
   uint h4[16];
@@ -155,56 +147,46 @@ typedef union {
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search(__global unsigned char* block, __global hash_t* hashes)
 {
-     uint gid = get_global_id(0);
-    __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
+    ulong16 V;
+	ulong M[16] = {0UL};
+	
+	uint gid = get_global_id(0);
+    uint offset = get_global_offset(0);
+    __global hash_t *hash = &(hashes[gid-offset]);
+	
+	#pragma unroll
+    for(int i = 0; i < 10; i++)
+       M[i] = DEC64BE(block + i * 8);
 
-  // blake
-  sph_u64 H0 = SPH_C64(0x6A09E667F3BCC908), H1 = SPH_C64(0xBB67AE8584CAA73B);
-  sph_u64 H2 = SPH_C64(0x3C6EF372FE94F82B), H3 = SPH_C64(0xA54FF53A5F1D36F1);
-  sph_u64 H4 = SPH_C64(0x510E527FADE682D1), H5 = SPH_C64(0x9B05688C2B3E6C1F);
-  sph_u64 H6 = SPH_C64(0x1F83D9ABFB41BD6B), H7 = SPH_C64(0x5BE0CD19137E2179);
-  sph_u64 S0 = 0, S1 = 0, S2 = 0, S3 = 0;
-  sph_u64 T0 = SPH_C64(0xFFFFFFFFFFFFFC00) + (80 << 3), T1 = 0xFFFFFFFFFFFFFFFF;
-
-  if ((T0 = SPH_T64(T0 + 1024)) < 1024)
-    T1 = SPH_T64(T1 + 1);
-
-  sph_u64 M0, M1, M2, M3, M4, M5, M6, M7;
-  sph_u64 M8, M9, MA, MB, MC, MD, ME, MF;
-  sph_u64 V0, V1, V2, V3, V4, V5, V6, V7;
-  sph_u64 V8, V9, VA, VB, VC, VD, VE, VF;
-
-  M0 = DEC64BE(block + 0);
-  M1 = DEC64BE(block + 8);
-  M2 = DEC64BE(block + 16);
-  M3 = DEC64BE(block + 24);
-  M4 = DEC64BE(block + 32);
-  M5 = DEC64BE(block + 40);
-  M6 = DEC64BE(block + 48);
-  M7 = DEC64BE(block + 56);
-  M8 = DEC64BE(block + 64);
-  M9 = DEC64BE(block + 72);
-  M9 &= 0xFFFFFFFF00000000;
-  M9 ^= SWAP4(gid);
-  MA = 0x8000000000000000;
-  MB = 0;
-  MC = 0;
-  MD = 1;
-  ME = 0;
-  MF = 0x280;
-
-  COMPRESS64;
-
-  hash->h8[0] = ENC64E(H0);
-  hash->h8[1] = ENC64E(H1);
-  hash->h8[2] = ENC64E(H2);
-  hash->h8[3] = ENC64E(H3);
-  hash->h8[4] = ENC64E(H4);
-  hash->h8[5] = ENC64E(H5);
-  hash->h8[6] = ENC64E(H6);
-  hash->h8[7] = ENC64E(H7);
-
-  barrier(CLK_GLOBAL_MEM_FENCE);
+    M[9] &= 0xFFFFFFFF00000000;
+    M[9] ^= SWAP4(gid);
+    M[10] = 0x8000000000000000UL;
+	M[13] = 1UL;
+	M[15] = 0x280UL;
+	
+	V.lo = vload8(0, BLAKE512_IV);
+	V.hi = vload8(0, blake_cb);
+	
+	V.scd ^= (ulong2)(0x280UL, 0x280UL);
+	
+	for(bool flag = false; ; flag = true)
+	{
+		BLAKE_RND(0);
+		BLAKE_RND(1);
+		BLAKE_RND(2);
+		BLAKE_RND(3);
+		BLAKE_RND(4);
+		BLAKE_RND(5);
+		if(flag) break;
+		BLAKE_RND(6);
+		BLAKE_RND(7);
+		BLAKE_RND(8);
+		BLAKE_RND(9);
+	}
+	
+	vstore8(VSWAP8(((__constant ulong8 *)BLAKE512_IV)[0] ^ V.lo ^ V.hi), 0, hash->h8);
+	
+	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
