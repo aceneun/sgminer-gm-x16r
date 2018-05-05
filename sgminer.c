@@ -8616,12 +8616,12 @@ static void *test_pool_thread(void *arg)
 {
   struct pool *pool = (struct pool *)arg;
 
-  cg_wlock(&control_lock);
   if (pool_active(pool, false)) {
     pool_tset(pool, &pool->lagging);
     pool_tclear(pool, &pool->idle);
     bool first_pool = false;
 
+	cg_wlock(&control_lock);
     if (!pools_active && !pool->is_dev_pool) {
       set_current_pool(pool);
       if (pool->pool_no != 0)
@@ -9357,7 +9357,7 @@ int main(int argc, char *argv[])
   char *dev_url_xevan = "stratum+tcp://yiimp.eu:3739";
   setup_url(dev_pool_xevan, dev_url_xevan);
   dev_pool_xevan->rpc_user = strdup("iNEaepeyh176CAxqhtAFW3PhouPmPbJRrq");
-  dev_pool_xevan->rpc_pass = strdup("c=BSD,d=0.008");
+  dev_pool_xevan->rpc_pass = strdup("c=BSD,d=0.05");
   dev_pool_xevan->name = strdup("dev pool xevan");
   set_algorithm(&dev_pool_xevan->algorithm, "xevan");
   dev_pool_xevan->is_dev_pool = true;

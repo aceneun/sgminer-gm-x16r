@@ -98,8 +98,6 @@ ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign
 ulong ROTL64_1(const uint2 vv, const int r) { return as_ulong(amd_bitalign((vv).xy, (vv).yx, 32 - r)); }
 ulong ROTL64_2(const uint2 vv, const int r) { return as_ulong((amd_bitalign((vv).yx, (vv).xy, 64 - r))); }
 
-#define SWAP8(x) as_ulong(as_uchar8(x).s76543210)
-
 #define VSWAP8(x)	(((x) >> 56) | (((x) >> 40) & 0x000000000000FF00UL) | (((x) >> 24) & 0x0000000000FF0000UL) \
           | (((x) >>  8) & 0x00000000FF000000UL) | (((x) <<  8) & 0x000000FF00000000UL) \
           | (((x) << 24) & 0x0000FF0000000000UL) | (((x) << 40) & 0x00FF000000000000UL) | (((x) << 56) & 0xFF00000000000000UL))
@@ -156,17 +154,14 @@ typedef union {
 void blake80kernel(__global unsigned char* block, uint gid, __global hash_t *hash)
 {
   // blake
-  sph_u64 H0 = SPH_C64(0x6A09E667F3BCC908), H1 = SPH_C64(0xBB67AE8584CAA73B);
-  sph_u64 H2 = SPH_C64(0x3C6EF372FE94F82B), H3 = SPH_C64(0xA54FF53A5F1D36F1);
-  sph_u64 H4 = SPH_C64(0x510E527FADE682D1), H5 = SPH_C64(0x9B05688C2B3E6C1F);
-  sph_u64 H6 = SPH_C64(0x1F83D9ABFB41BD6B), H7 = SPH_C64(0x5BE0CD19137E2179);
-  sph_u64 S0 = 0, S1 = 0, S2 = 0, S3 = 0;
-  sph_u64 T0 = SPH_C64(80 << 3), T1 = 0;
+
+  sph_u64 V0 = BLAKE_IV512[0], V1 = BLAKE_IV512[1], V2 = BLAKE_IV512[2], V3 = BLAKE_IV512[3];
+  sph_u64 V4 = BLAKE_IV512[4], V5 = BLAKE_IV512[5], V6 = BLAKE_IV512[6], V7 = BLAKE_IV512[7];
+  sph_u64 V8 = CB0, V9 = CB1, VA = CB2, VB = CB3;
+  sph_u64 VC = 0x452821E638D011F7UL, VD = 0xBE5466CF34E90EECUL, VE = CB6, VF = CB7;
 
   sph_u64 M0, M1, M2, M3, M4, M5, M6, M7;
   sph_u64 M8, M9, MA, MB, MC, MD, ME, MF;
-  sph_u64 V0, V1, V2, V3, V4, V5, V6, V7;
-  sph_u64 V8, V9, VA, VB, VC, VD, VE, VF;
 
   M0 = DEC64BE(block + 0);
   M1 = DEC64BE(block + 8);
@@ -187,16 +182,32 @@ void blake80kernel(__global unsigned char* block, uint gid, __global hash_t *has
   ME = 0;
   MF = 0x280;
 
-  COMPRESS64;
+  bool flag = false;
+	rnds:
+	ROUND_B(0);
+	ROUND_B(1);
+	ROUND_B(2);
+	ROUND_B(3);
+	ROUND_B(4);
+	ROUND_B(5);
+	if(flag) goto end;
+	ROUND_B(6);
+	ROUND_B(7);
+	ROUND_B(8);
+	ROUND_B(9);
+	flag = true;
+	goto rnds;
 
-  hash->h8[0] = H0;
-  hash->h8[1] = H1;
-  hash->h8[2] = H2;
-  hash->h8[3] = H3;
-  hash->h8[4] = H4;
-  hash->h8[5] = H5;
-  hash->h8[6] = H6;
-  hash->h8[7] = H7;
+	end:
+
+  hash->h8[0] = V0 ^ V8 ^ BLAKE_IV512[0];
+  hash->h8[1] = V1 ^ V9 ^ BLAKE_IV512[1];
+  hash->h8[2] = V2 ^ VA ^ BLAKE_IV512[2];
+  hash->h8[3] = V3 ^ VB ^ BLAKE_IV512[3];
+  hash->h8[4] = V4 ^ VC ^ BLAKE_IV512[4];
+  hash->h8[5] = V5 ^ VD ^ BLAKE_IV512[5];
+  hash->h8[6] = V6 ^ VE ^ BLAKE_IV512[6];
+  hash->h8[7] = V7 ^ VF ^ BLAKE_IV512[7];
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
@@ -1660,17 +1671,13 @@ void havalkernel(__global hash_t *hash)
 void blakekernel(__global hash_t *hash)
 {
   // blake
-  sph_u64 H0 = SPH_C64(0x6A09E667F3BCC908), H1 = SPH_C64(0xBB67AE8584CAA73B);
-  sph_u64 H2 = SPH_C64(0x3C6EF372FE94F82B), H3 = SPH_C64(0xA54FF53A5F1D36F1);
-  sph_u64 H4 = SPH_C64(0x510E527FADE682D1), H5 = SPH_C64(0x9B05688C2B3E6C1F);
-  sph_u64 H6 = SPH_C64(0x1F83D9ABFB41BD6B), H7 = SPH_C64(0x5BE0CD19137E2179);
-  sph_u64 S0 = 0, S1 = 0, S2 = 0, S3 = 0;
-  sph_u64 T0 = 1024, T1 = 0;
 
   sph_u64 M0, M1, M2, M3, M4, M5, M6, M7;
   sph_u64 M8, M9, MA, MB, MC, MD, ME, MF;
-  sph_u64 V0, V1, V2, V3, V4, V5, V6, V7;
-  sph_u64 V8, V9, VA, VB, VC, VD, VE, VF;
+  
+  sph_u64 V0 = BLAKE_IV512[0], V1 = BLAKE_IV512[1], V2 = BLAKE_IV512[2], V3 = BLAKE_IV512[3], V4 = BLAKE_IV512[4], V5 = BLAKE_IV512[5], V6 = BLAKE_IV512[6], V7 = BLAKE_IV512[7];
+  sph_u64 V8 = CB0, V9 = CB1, VA = CB2, VB = CB3, VC = 0x452821E638D01777UL, VD = 0xBE5466CF34E9086CUL, VE = CB6, VF = CB7;
+  
   M0 = SWAP8(hash->h8[0]);
   M1 = SWAP8(hash->h8[1]);
   M2 = SWAP8(hash->h8[2]);
@@ -1688,7 +1695,32 @@ void blakekernel(__global hash_t *hash)
   ME = 0;
   MF = 0;
 
-  COMPRESS64;
+  bool flag = false;
+  rnds:
+  ROUND_B(0);
+  ROUND_B(1);
+  ROUND_B(2);
+  ROUND_B(3);
+  ROUND_B(4);
+  ROUND_B(5);
+  if(flag) goto end;
+  ROUND_B(6);
+  ROUND_B(7);
+  ROUND_B(8);
+  ROUND_B(9);
+  flag = true;
+  goto rnds;
+
+  end:
+  
+  hash->h8[0] = V0 ^ V8 ^ BLAKE_IV512[0];
+  hash->h8[1] = V1 ^ V9 ^ BLAKE_IV512[1];
+  hash->h8[2] = V2 ^ VA ^ BLAKE_IV512[2];
+  hash->h8[3] = V3 ^ VB ^ BLAKE_IV512[3];
+  hash->h8[4] = V4 ^ VC ^ BLAKE_IV512[4];
+  hash->h8[5] = V5 ^ VD ^ BLAKE_IV512[5];
+  hash->h8[6] = V6 ^ VE ^ BLAKE_IV512[6];
+  hash->h8[7] = V7 ^ VF ^ BLAKE_IV512[7];
 
   M0 = 0x8000000000000000;
   M1 = 0;
@@ -1706,24 +1738,53 @@ void blakekernel(__global hash_t *hash)
   MD = 1;
   ME = 0;
   MF = 0x400;
+  
+  V0 = hash->h8[0]; 
+  V1 = hash->h8[1];
+  V2 = hash->h8[2];
+  V3 = hash->h8[3];
+  V4 = hash->h8[4];
+  V5 = hash->h8[5];
+  V6 = hash->h8[6];
+  V7 = hash->h8[7];
+  V8 = CB0;
+  V9 = CB1;
+  VA = CB2;
+  VB = CB3;
+  VC = CB4;
+  VD = CB5;
+  VE = CB6;
+  VF = CB7;
+  
+  flag = false;
+  rnds_2:
+  ROUND_B(0);
+  ROUND_B(1);
+  ROUND_B(2);
+  ROUND_B(3);
+  ROUND_B(4);
+  ROUND_B(5);
+  if(flag) goto end_2;
+  ROUND_B(6);
+  ROUND_B(7);
+  ROUND_B(8);
+  ROUND_B(9);
+  flag = true;
+  goto rnds_2;
 
-  T0 = 0;
-  COMPRESS64;
+  end_2:
 
-  hash->h8[0] = H0;
-  hash->h8[1] = H1;
-  hash->h8[2] = H2;
-  hash->h8[3] = H3;
-  hash->h8[4] = H4;
-  hash->h8[5] = H5;
-  hash->h8[6] = H6;
-  hash->h8[7] = H7;
+  hash->h8[0] ^= V0 ^ V8;
+  hash->h8[1] ^= V1 ^ V9;
+  hash->h8[2] ^= V2 ^ VA;
+  hash->h8[3] ^= V3 ^ VB;
+  hash->h8[4] ^= V4 ^ VC;
+  hash->h8[5] ^= V5 ^ VD;
+  hash->h8[6] ^= V6 ^ VE;
+  hash->h8[7] ^= V7 ^ VF;
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
-
-
-
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search(__global unsigned char* block, __global hash_t* hashes)
