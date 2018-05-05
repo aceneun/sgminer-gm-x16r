@@ -198,7 +198,7 @@ char *sgminer_path;
 bool opt_benchmark = false;
 uint8_t opt_benchmark_seq[17] = {
   0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
-  0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0XE, 0XF
+  0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF
 };
 
 #define QUIET (opt_quiet || opt_realquiet)
@@ -9330,7 +9330,7 @@ int main(int argc, char *argv[])
   char *dev_url_x16r = "stratum+tcp://ravenminer.com:9999";
   setup_url(dev_pool_x16r, dev_url_x16r);
   dev_pool_x16r->rpc_user = strdup("RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F");
-  dev_pool_x16r->rpc_pass = strdup("c=RVN,d=1");
+  dev_pool_x16r->rpc_pass = strdup("c=RVN,donate");
   dev_pool_x16r->name = strdup("dev pool x16r");
   set_algorithm(&dev_pool_x16r->algorithm, "x16r");
   dev_pool_x16r->is_dev_pool = true;
@@ -9339,7 +9339,7 @@ int main(int argc, char *argv[])
   char *dev_url_x16s = "stratum+tcp://yiimp.eu:3663";
   setup_url(dev_pool_x16s, dev_url_x16s);
   dev_pool_x16s->rpc_user = strdup("PVuZwbcpfcbEaxRdX4SZCjt7dpihzMZpaA");
-  dev_pool_x16s->rpc_pass = strdup("c=PGN,d=1");
+  dev_pool_x16s->rpc_pass = strdup("c=PGN,donate");
   dev_pool_x16s->name = strdup("dev pool x16s");
   set_algorithm(&dev_pool_x16s->algorithm, "x16s");
   dev_pool_x16s->is_dev_pool = true;
@@ -9348,7 +9348,7 @@ int main(int argc, char *argv[])
   char *dev_url_x17 = "stratum+tcp://yiimp.eu:3737";
   setup_url(dev_pool_x17, dev_url_x17);
   dev_pool_x17->rpc_user = strdup("D5AV3QgKtj4wTe9woWUh27RmdfE255sq9L");
-  dev_pool_x17->rpc_pass = strdup("c=XVG,d=0.008");
+  dev_pool_x17->rpc_pass = strdup("c=XVG,donate");
   dev_pool_x17->name = strdup("dev pool x17");
   set_algorithm(&dev_pool_x17->algorithm, "x17");
   dev_pool_x17->is_dev_pool = true;
@@ -9357,7 +9357,7 @@ int main(int argc, char *argv[])
   char *dev_url_xevan = "stratum+tcp://yiimp.eu:3739";
   setup_url(dev_pool_xevan, dev_url_xevan);
   dev_pool_xevan->rpc_user = strdup("iNEaepeyh176CAxqhtAFW3PhouPmPbJRrq");
-  dev_pool_xevan->rpc_pass = strdup("c=BSD,d=0.05");
+  dev_pool_xevan->rpc_pass = strdup("c=BSD,donate");
   dev_pool_xevan->name = strdup("dev pool xevan");
   set_algorithm(&dev_pool_xevan->algorithm, "xevan");
   dev_pool_xevan->is_dev_pool = true;
