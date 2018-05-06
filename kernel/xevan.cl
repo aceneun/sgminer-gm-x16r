@@ -336,21 +336,8 @@ void GroestlCompress(ulong *State, ulong *Msg, __local ulong *T0, __local ulong 
 	for(int i = 0; i < 16; ++i) State[i] = Output[i];
 }
 
-void groestlkernel(__global hash_t *hash)
+void groestlkernel(__global hash_t *hash, __local ulong *T0, __local ulong *T1, __local ulong *T2, __local ulong *T3)
 {
-	__local ulong T0[256], T1[256], T2[256], T3[256];
-
-	for(int i = get_local_id(0); i < 256; i += WORKSIZE)
-	{
-		const ulong tmp = T0_G[i];
-		T0[i] = tmp;
-		T1[i] = rotate(tmp, 8UL);
-		T2[i] = rotate(tmp, 16UL);
-		T3[i] = rotate(tmp, 24UL);
-	}
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
 	ulong M[16] = { 0 }, H[16] = { 0 }, H2[16];
 
 	#pragma unroll
@@ -2032,8 +2019,24 @@ __kernel void search19(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
+  
+  __local ulong T0[256], T1[256], T2[256], T3[256];
+	
+	int step = get_local_size(0);
+	int init = get_local_id(0);
 
-  groestlkernel(hash);
+	for(int i = init; i < 256; i += step)
+	{
+		const ulong tmp = T0_G[i];
+		T0[i] = tmp;
+		T1[i] = rotate(tmp, 8UL);
+		T2[i] = rotate(tmp, 16UL);
+		T3[i] = rotate(tmp, 24UL);
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+  groestlkernel(hash, T0, T1, T2, T3);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))

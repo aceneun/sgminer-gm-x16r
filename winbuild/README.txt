@@ -28,9 +28,9 @@ x64 version:
 -----------------------------------------------
 - go to https://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/ and download appropriate version (x86/x64) and install
 - copy C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86\OpenCL.lib to winbuild/dist/lib/x86/
-- copy C:\Program Files (x86)\AMD APP SDK\3.0\bin\x86\OpenCL.dll to winbuild/dist/dll/x86/
+- copy C:\Program Files (x86)\AMD APP SDK\3.0\bin\x86\OpenCL.dll to winbuild/dist/bin/x86/
 - copy C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64\OpenCL.lib to winbuild/dist/lib/x64/
-- copy C:\Program Files (x86)\AMD APP SDK\3.0\bin\x86_64\OpenCL.dll to winbuild/dist/dll/x64/
+- copy C:\Program Files (x86)\AMD APP SDK\3.0\bin\x86_64\OpenCL.dll to winbuild/dist/bin/x64/
 - copy C:\Program Files (x86)\AMD APP SDK\3.0\include\CL\* winbuild/dist/include/CL/
 
 3. Download AMD Display Library (ADL) SDK, latest version
@@ -47,7 +47,7 @@ x64 version:
 x86 version:
 	- open Visual Studio Command Prompt (x86)
 	- go to win32 folder
-	- execute: nmake -f vcwin32.mak WIDE=1 UTF8=1 pdcurses.lib
+	- execute: nmake -f vcwin32.mak WIDE=1 UTF8=1 pdcurses.lib DLL=Y
 	- copy newly created pdcurses.lib to winbuild\dist\lib\x86\ folder
 x64 version:
 - open Visual Studio Command Prompt (x64)
@@ -56,7 +56,7 @@ x64 version:
 		cvtres /MACHINE:IX86 /NOLOGO /OUT:pdcurses.obj pdcurses.res
 		to
 		cvtres /MACHINE:X64 /NOLOGO /OUT:pdcurses.obj pdcurses.res
-	- execute: nmake -f vcwin32.mak WIDE=1 UTF8=1 pdcurses.lib
+	- execute: nmake -f vcwin32.mak WIDE=1 UTF8=1 pdcurses.lib DLL=Y
 	- copy newly created pdcurses.lib to winbuild\dist\lib\x64\ folder
 
 
