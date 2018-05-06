@@ -80,18 +80,6 @@ const char* X16R_ALGO_NAMES[X16R_HASH_FUNC_COUNT] = {
   "sha512"
 };
 
-/*
- * Encode a length len/4 vector of (uint32_t) into a length len vector of
- * (unsigned char) in big-endian form.  Assumes len is a multiple of 4.
- */
-static inline void be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
-{
-  uint32_t i;
-
-  for (i = 0; i < len; i++)
-    dst[i] = htobe32(src[i]);
-}
-
 void x16r_hash(void *state, const void *input)
 {
   unsigned char _ALIGN(64) hash[128];

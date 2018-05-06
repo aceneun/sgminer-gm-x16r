@@ -254,12 +254,6 @@
     <ClCompile Include="..\sysfs-gpu-controls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\algorithm\x16s.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\sph\sha256_Y.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\algorithm\ethgencache.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
@@ -276,6 +270,12 @@
       <Filter>Source Files\sph</Filter>
     </ClCompile>
     <ClCompile Include="..\algorithm\xevan.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\algorithm\x16s.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sph\sha256_Y.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
   </ItemGroup>

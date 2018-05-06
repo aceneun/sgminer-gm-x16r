@@ -32,19 +32,7 @@
 #include "../algorithm/sysendian.h"
 
 #include "sha256_Y.h"
-
-/*
- * Encode a length len/4 vector of (uint32_t) into a length len vector of
- * (unsigned char) in big-endian form.  Assumes len is a multiple of 4.
- */
-static void
-be32enc_vect(unsigned char *dst, const uint32_t *src, size_t len)
-{
-	size_t i;
-
-	for (i = 0; i < len / 4; i++)
-		be32enc(dst + i * 4, src[i]);
-}
+#include "miner.h"
 
 /*
  * Decode a big-endian length len vector of (unsigned char) into a length
@@ -200,7 +188,7 @@ SHA256_Pad(SHA256_CTX_Y * ctx)
 	 * Convert length to a vector of bytes -- we do this now rather
 	 * than later because the length will change after we pad.
 	 */
-	be32enc_vect(len, ctx->count, 8);
+	be32enc_vect((uint32_t*)len, ctx->count, 8);
 
 	/* Add 1--64 bytes so that the resulting length is 56 mod 64 */
 	r = (ctx->count[1] >> 3) & 0x3f;
@@ -287,7 +275,7 @@ SHA256_Final_Y(unsigned char digest[32], SHA256_CTX_Y * ctx)
 	SHA256_Pad(ctx);
 
 	/* Write the hash */
-	be32enc_vect(digest, ctx->state, 32);
+	be32enc_vect((uint32_t*)digest, ctx->state, 32);
 
 	/* Clear the context state */
 	memset((void *)ctx, 0, sizeof(*ctx));
