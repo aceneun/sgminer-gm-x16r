@@ -3,55 +3,35 @@
 
 // Macros and table for Wolf's OpenCL Groestl implementation
 
-#pragma OPENCL EXTENSION cl_amd_media_ops2 : enable
-
-#define BYTE(x, y)	(amd_bfe((uint)((x) >> ((y >= 32U) ? 32U : 0U)), (y) - (((y) >= 32) ? 32U : 0), 8U))
-
-#define B64_0(x)	((uchar)(x))
-#define B64_1(x)    BYTE((x), 8U)
-#define B64_2(x)    BYTE((x), 16U)
-#define B64_3(x)    BYTE((x), 24U)
-#define B64_4(x)    BYTE((x), 32U)
-#define B64_5(x)    BYTE((x), 40U)
-#define B64_6(x)    BYTE((x), 48U)
-#define B64_7(x)    BYTE((x), 56U)
-
-#define GROESTL_RBTT(d, Hval, b0, b1, b2, b3, b4, b5, b6, b7)   do { \
-	d = (T0[B64_0(Hval[b0])] ^ T1[B64_1(Hval[b1])] ^ T2[B64_2(Hval[b2])] ^ T3[B64_3(Hval[b3])] \
-	^ as_ulong(as_uint2(T0[B64_4(Hval[b4])]).s10) ^ as_ulong(as_uint2(T1[B64_5(Hval[b5])]).s10) ^ as_ulong(as_uint2(T2[B64_6(Hval[b6])]).s10) ^ as_ulong(as_uint2(T3[B64_7(Hval[b7])]).s10)); \
-	} while(0)
-
-/*
-//#define BYTE(x, y)	(amd_bfe((x), (y), 8U))
-#define BYTE(x, y)	(amd_bfe((uint)((x) >> ((y >= 32U) ? 32U : 0U)), (y) - (((y) >= 32) ? 32U : 0), 8U))
-
-#define B64_0(x)	((uchar)(x))
-#define B64_1(x)    BYTE((x), 8U)
-#define B64_2(x)    BYTE((x), 16U)
-#define B64_3(x)    BYTE((x), 24U)
-#define B64_4(x)    as_ulong(as_uint2((x)).s10)
-#define B64_5(x)    BYTE((x), 40U)
-#define B64_6(x)    BYTE((x), 48U)
-#define B64_7(x)    BYTE((x), 56U)
+#ifdef NO_AMD_OPS
+	#define B64_0(x)    ((x) & 0xFF)
+	#define B64_1(x)    (((x) >> 8) & 0xFF)
+	#define B64_2(x)    (((x) >> 16) & 0xFF)
+	#define B64_3(x)    (((x) >> 24) & 0xFF)
+	#define B64_4(x)    (((x) >> 32) & 0xFF)
+	#define B64_5(x)    (((x) >> 40) & 0xFF)
+	#define B64_6(x)    (((x) >> 48) & 0xFF)
+	#define B64_7(x)    ((x) >> 56)
+#else
+	#pragma OPENCL EXTENSION cl_amd_media_ops2 : enable
+	#define B64_0(x)    ((uchar)(x))
+	#define B64_1(x)    (amd_bfe((uint)(x), 8U, 8U))
+	#define B64_2(x)    (amd_bfe((uint)(x), 16U, 8U))
+	#define B64_3(x)    (amd_bfe((uint)(x), 24U, 8U))
+	#define B64_4(x)    ((uchar)((x) >> 32U))
+	#define B64_5(x)    (amd_bfe((uint)((x) >> 32U),  8U, 8U))
+	#define B64_6(x)    (amd_bfe((uint)((x) >> 32U), 16U, 8U))
+	#define B64_7(x)    (amd_bfe((uint)((x) >> 32U), 24U, 8U))
+#endif
 
 #define GROESTL_RBTT(d, Hval, b0, b1, b2, b3, b4, b5, b6, b7)   do { \
 	d = (T0[B64_0(Hval[b0])] ^ T1[B64_1(Hval[b1])] ^ T2[B64_2(Hval[b2])] ^ T3[B64_3(Hval[b3])] \
 	^ as_ulong(as_uint2(T0[B64_4(Hval[b4])]).s10) ^ as_ulong(as_uint2(T1[B64_5(Hval[b5])]).s10) ^ as_ulong(as_uint2(T2[B64_6(Hval[b6])]).s10) ^ as_ulong(as_uint2(T3[B64_7(Hval[b7])]).s10)); \
 	} while(0)
-*/
+
 
 #define PC64(j, r)  (ulong)((j) | (r))
 #define QC64(j, r)	rotate(((ulong)(r)) ^ (~((ulong)(j))), 56UL)
-
-//#define PC64(j, r)  ((sph_u64)((j) + (r)))
-//#define PC64(j, r)	((ulong)(((uchar)(j)) + (uchar)(r)))
-//#define PC64(j, r)	((((uchar)(j)) + (uchar)(r)))
-
-//#define QC64(j, r)	(((ulong)(r) << 56) ^ ~((ulong)(j) << 56))
-
-//#define QC64(j, r)	(((ulong)(r) << 56) ^ (j))
-
-//#define QC64(j, r)	as_uint2((r) ^ (j))
 
 static const __constant ulong T0_G[] =
 {

@@ -2045,11 +2045,13 @@ __kernel void search22(__global ulong* block, __global hash_t* hashes)
   int init = get_local_id(0);
   int step = get_local_size(0);
 
-  for (int i = init; i < 256; i += step) {
-    AES0[i] = AES0_C[i];
-    AES1[i] = AES1_C[i];
-    AES2[i] = AES2_C[i];
-    AES3[i] = AES3_C[i];
+  for(int i = get_local_id(0); i < 256; i += step)
+  {
+	const uint tmp = AES0_C[i];
+	AES0[i] = tmp;
+	AES1[i] = rotate(tmp, 8U);
+	AES2[i] = rotate(tmp, 16U);
+	AES3[i] = rotate(tmp, 24U);
   }
 
   barrier(CLK_LOCAL_MEM_FENCE);

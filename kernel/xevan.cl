@@ -336,8 +336,24 @@ void GroestlCompress(ulong *State, ulong *Msg, __local ulong *T0, __local ulong 
 	for(int i = 0; i < 16; ++i) State[i] = Output[i];
 }
 
-void groestlkernel(__global hash_t *hash, __local ulong *T0, __local ulong *T1, __local ulong *T2, __local ulong *T3)
+void groestlkernel(__global hash_t *hash)
 {
+	  __local ulong T0[256], T1[256], T2[256], T3[256];
+	
+	int step = get_local_size(0);
+	int init = get_local_id(0);
+
+	for(int i = init; i < 256; i += step)
+	{
+		const ulong tmp = T0_G[i];
+		T0[i] = tmp;
+		T1[i] = rotate(tmp, 8UL);
+		T2[i] = rotate(tmp, 16UL);
+		T3[i] = rotate(tmp, 24UL);
+	}
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
 	ulong M[16] = { 0 }, H[16] = { 0 }, H2[16];
 
 	#pragma unroll
@@ -858,13 +874,8 @@ void simdkernel(__global hash_t *hash)
   FFT256(0, 1, 0, ll1);
   for (int i = 0; i < 256; i ++)
   {
-    s32 tq;
-
-    tq = q[i] + yoff_b_n[i];
-    tq = REDS2(tq);
-    tq = REDS1(tq);
-    tq = REDS1(tq);
-    q[i] = (tq <= 128 ? tq : tq - 257);
+    const s32 tq = REDS1(REDS1(q[i] + yoff_b_n[i]));
+    q[i] = select(tq - 257, tq, tq <= 128);
   }
 
   A0 ^= hash->h4[0];
@@ -1856,12 +1867,13 @@ __kernel void search8(__global hash_t* hashes)
   int init = get_local_id(0);
   int step = get_local_size(0);
 
-  for (int i = init; i < 256; i += step)
+  for(int i = get_local_id(0); i < 256; i += step)
   {
-    AES0[i] = AES0_C[i];
-    AES1[i] = AES1_C[i];
-    AES2[i] = AES2_C[i];
-    AES3[i] = AES3_C[i];
+	const uint tmp = AES0_C[i];
+	AES0[i] = tmp;
+	AES1[i] = rotate(tmp, 8U);
+	AES2[i] = rotate(tmp, 16U);
+	AES3[i] = rotate(tmp, 24U);
   }
 
   barrier(CLK_LOCAL_MEM_FENCE);
@@ -1890,12 +1902,13 @@ __kernel void search10(__global hash_t* hashes)
   int init = get_local_id(0);
   int step = get_local_size(0);
 
-  for (int i = init; i < 256; i += step)
+  for(int i = get_local_id(0); i < 256; i += step)
   {
-    AES0[i] = AES0_C[i];
-    AES1[i] = AES1_C[i];
-    AES2[i] = AES2_C[i];
-    AES3[i] = AES3_C[i];
+	const uint tmp = AES0_C[i];
+	AES0[i] = tmp;
+	AES1[i] = rotate(tmp, 8U);
+	AES2[i] = rotate(tmp, 16U);
+	AES3[i] = rotate(tmp, 24U);
   }
 
   barrier(CLK_LOCAL_MEM_FENCE);
@@ -2019,24 +2032,8 @@ __kernel void search19(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-  
-  __local ulong T0[256], T1[256], T2[256], T3[256];
-	
-	int step = get_local_size(0);
-	int init = get_local_id(0);
 
-	for(int i = init; i < 256; i += step)
-	{
-		const ulong tmp = T0_G[i];
-		T0[i] = tmp;
-		T1[i] = rotate(tmp, 8UL);
-		T2[i] = rotate(tmp, 16UL);
-		T3[i] = rotate(tmp, 24UL);
-	}
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-  groestlkernel(hash, T0, T1, T2, T3);
+  groestlkernel(hash);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -2095,12 +2092,13 @@ __kernel void search25(__global hash_t* hashes)
   int init = get_local_id(0);
   int step = get_local_size(0);
 
-  for (int i = init; i < 256; i += step)
+  for(int i = get_local_id(0); i < 256; i += step)
   {
-    AES0[i] = AES0_C[i];
-    AES1[i] = AES1_C[i];
-    AES2[i] = AES2_C[i];
-    AES3[i] = AES3_C[i];
+	const uint tmp = AES0_C[i];
+	AES0[i] = tmp;
+	AES1[i] = rotate(tmp, 8U);
+	AES2[i] = rotate(tmp, 16U);
+	AES3[i] = rotate(tmp, 24U);
   }
 
   barrier(CLK_LOCAL_MEM_FENCE);
@@ -2129,12 +2127,13 @@ __kernel void search27(__global hash_t* hashes)
   int init = get_local_id(0);
   int step = get_local_size(0);
 
-  for (int i = init; i < 256; i += step)
+  for(int i = get_local_id(0); i < 256; i += step)
   {
-    AES0[i] = AES0_C[i];
-    AES1[i] = AES1_C[i];
-    AES2[i] = AES2_C[i];
-    AES3[i] = AES3_C[i];
+	const uint tmp = AES0_C[i];
+	AES0[i] = tmp;
+	AES1[i] = rotate(tmp, 8U);
+	AES2[i] = rotate(tmp, 16U);
+	AES3[i] = rotate(tmp, 24U);
   }
 
   barrier(CLK_LOCAL_MEM_FENCE);
