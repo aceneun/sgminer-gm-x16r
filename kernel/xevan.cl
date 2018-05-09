@@ -1438,9 +1438,9 @@ void whirlpoolkernel(__global hash_t *hash, __local sph_u64 LT0[256], __local sp
   {
     sph_u64 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 
-    ROUND_KSCHED(plain_T, h, tmp, plain_RC[r]);
+    ROUND_KSCHED(LT, h, tmp, plain_RC[r]);
     TRANSFER(h, tmp);
-    ROUND_WENC(plain_T, n, h, tmp);
+    ROUND_WENC(LT, n, h, tmp);
     TRANSFER(n, tmp);
   }
 
@@ -1478,9 +1478,9 @@ void whirlpoolkernel(__global hash_t *hash, __local sph_u64 LT0[256], __local sp
   {
     sph_u64 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
 
-    ROUND_KSCHED(plain_T, h, tmp, plain_RC[r]);
+    ROUND_KSCHED(LT, h, tmp, plain_RC[r]);
     TRANSFER(h, tmp);
-    ROUND_WENC(plain_T, n, h, tmp);
+    ROUND_WENC(LT, n, h, tmp);
     TRANSFER(n, tmp);
   }
 
@@ -1522,7 +1522,7 @@ void whirlpoolkernel(__global hash_t *hash, __local sph_u64 LT0[256], __local sp
 
     ROUND_KSCHED(LT, h, tmp, plain_RC[r]);
     TRANSFER(h, tmp);
-    ROUND_WENC(plain_T, n, h, tmp);
+    ROUND_WENC(LT, n, h, tmp);
     TRANSFER(n, tmp);
   }
 
