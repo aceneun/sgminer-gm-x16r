@@ -2041,20 +2041,6 @@ static bool jobj_binary(const json_t *obj, const char *key,
 }
 #endif
 
-static void calc_midstate(struct work *work)
-{
-  unsigned char data[64];
-  uint32_t *data32 = (uint32_t *)data;
-  sph_sha256_context ctx;
-
-  flip64(data32, work->data);
-  sph_sha256_init(&ctx);
-  sph_sha256(&ctx, data, 64);
-  memcpy(work->midstate, ctx.val, 32);
-  endian_flip32(work->midstate, work->midstate);
-}
-
-
 static struct work *make_work(void)
 {
   struct work *w = (struct work *)calloc(sizeof(struct work), 1);
@@ -2356,10 +2342,8 @@ static void gen_gbt_work(struct pool *pool, struct work *work)
     free(header);
   }
 
-  // Neoscrypt doesn't calc_midstate()
-  if (pool->algorithm.type != ALGO_NEOSCRYPT) {
-    calc_midstate(work);
-  }
+  if (pool->algorithm.calc_midstate) pool->algorithm.calc_midstate(work);
+
   local_work++;
   work->pool = pool;
   work->gbt = true;
@@ -2561,7 +2545,7 @@ static bool getwork_decode(json_t *res_val, struct work *work)
       if (opt_morenotices) {
         applog(LOG_DEBUG, "%s: Calculating midstate locally", isnull(get_pool_name(work->pool), ""));
       }
-      calc_midstate(work);
+	  if (work->pool->algorithm.calc_midstate) work->pool->algorithm.calc_midstate(work);
     }
   }
 
@@ -6864,7 +6848,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
   if (pool->algorithm.type == ALGO_NEOSCRYPT) {
     set_target_neoscrypt(work->target, work->sdiff, work->thr_id);
   } else {
-    calc_midstate(work);
+	  if (pool->algorithm.calc_midstate) pool->algorithm.calc_midstate(work);
     set_target(work->target, work->sdiff, pool->algorithm.diff_multiplier2, work->thr_id);
   }
 

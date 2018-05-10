@@ -1368,8 +1368,8 @@ static bool opencl_thread_init(struct thr_info *thr)
 static bool opencl_prepare_work(struct thr_info __maybe_unused *thr, struct work *work)
 {
   work->blk.work = work;
-  if (work->pool->algorithm.precalc_hash)
-    work->pool->algorithm.precalc_hash(&work->blk, 0, (uint32_t *)(work->data));
+  if (work->pool->algorithm.prepare_work) 
+	  work->pool->algorithm.prepare_work(&work->blk, (uint32_t *)(work->midstate), (uint32_t *)(work->data));
   thr->pool_no = work->pool->pool_no;
 
   return true;
