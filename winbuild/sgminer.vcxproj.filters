@@ -278,6 +278,12 @@
     <ClCompile Include="..\sph\sha256_Y.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
+    <ClCompile Include="..\algorithm\phi.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sph\gost.c">
+      <Filter>Source Files\sph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\adl.h">
@@ -537,6 +543,12 @@
     </ClInclude>
     <ClInclude Include="..\algorithm\xevan.h">
       <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\algorithm\phi.h">
+      <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sph\sph_gost.h">
+      <Filter>Header Files\sph</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
