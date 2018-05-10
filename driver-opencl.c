@@ -1646,6 +1646,7 @@ static void opencl_thread_shutdown(struct thr_info *thr)
   if (clState) {
     clFinish(clState->commandQueue);
     clReleaseMemObject(clState->outputBuffer);
+	clReleaseMemObject(clState->MidstateBuf);
     clReleaseMemObject(clState->CLbuffer0);
     if (clState->buffer1)
       clReleaseMemObject(clState->buffer1);

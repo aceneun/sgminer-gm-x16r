@@ -107,30 +107,22 @@ typedef union {
 #define SWAP8_USELESS(x) x
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void search(__global ulong* block, __global hash_t* hashes)
+__kernel void search(__global ulong* block, __global ulong* midstate, __global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
-  // input skein 80
+  // input skein 80 midstate
 
-  ulong8 m = vload8(0, block);
+  ulong8 h2 = vload8(0, midstate);
 
-  ulong8 h = (ulong8)(  0x4903ADFF749C51CEUL, 0x0D95DE399746DF03UL, 0x8FD1934127C79BCEUL, 0x9A255629FF352CB1UL,
-                0x5DB62599DF6CA7B0UL, 0xEABE394CA9D5C3F4UL, 0x991112C71A75B523UL, 0xAE18A40B660FCC33UL);
+  const ulong t1[3] = { 0x50UL, 0xB000000000000000UL, 0xB000000000000050UL },
+        t2[3] = { 0x08UL, 0xFF00000000000000UL, 0xFF00000000000008UL };
 
-  ulong t[3] = { 0x40UL, 0x7000000000000000UL, 0x7000000000000040UL },
-       t1[3] = { 0x50UL, 0xB000000000000000UL, 0xB000000000000050UL },
-       t2[3] = { 0x08UL, 0xFF00000000000000UL, 0xFF00000000000008UL };
-
-  ulong8 p = Skein512Block(m, h, 0xCAB2076D98173EC4UL, t);
-
-  ulong8 h2 = m ^ p;
-
-  m = (ulong8)(block[8], (block[9] & 0x00000000FFFFFFFF) | ((ulong)SWAP4(gid) << 32), 0UL, 0UL, 0UL, 0UL, 0UL, 0UL);
+  const ulong8 m = (ulong8)(block[8], (block[9] & 0x00000000FFFFFFFF) | ((ulong)SWAP4(gid) << 32), 0UL, 0UL, 0UL, 0UL, 0UL, 0UL);
   ulong h8 = h2.s0 ^ h2.s1 ^ h2.s2 ^ h2.s3 ^ h2.s4 ^ h2.s5 ^ h2.s6 ^ h2.s7 ^ SKEIN_KS_PARITY;
 
-  p = Skein512Block(m, h2, h8, t1);
+  ulong8 p = Skein512Block(m, h2, h8, t1);
 
   h2 = m ^ p;
 

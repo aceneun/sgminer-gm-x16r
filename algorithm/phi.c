@@ -81,6 +81,53 @@ static void phihash(void *state, const void *input)
 
 }
 
+void phi_midstate(struct work *work)
+{
+  sph_skein512_context     ctx_skein;
+  uint64_t *midstate = (uint64_t *)work->midstate;
+  uint32_t data[19];
+
+  be32enc_vect(data, (const uint32_t *)work->data, 19);
+
+  sph_skein512_init(&ctx_skein);
+  sph_skein512 (&ctx_skein, (unsigned char *)data, 76);
+
+  midstate[0] = ctx_skein.h0;
+  midstate[1] = ctx_skein.h1;
+  midstate[2] = ctx_skein.h2;
+  midstate[3] = ctx_skein.h3;
+  midstate[4] = ctx_skein.h4;
+  midstate[5] = ctx_skein.h5;
+  midstate[6] = ctx_skein.h6;
+  midstate[7] = ctx_skein.h7;
+
+  char *strdata, *strmidstate;
+  strdata = bin2hex(work->data, 80);
+  strmidstate = bin2hex(work->midstate, 64);
+  applog(LOG_DEBUG, "data %s midstate %s", strdata, strmidstate);
+}
+
+void phi_prepare_work(dev_blk_ctx *blk, uint32_t *state, uint32_t *pdata)
+{
+        blk->ctx_a = state[0];
+        blk->ctx_b = state[1];
+        blk->ctx_c = state[2];
+        blk->ctx_d = state[3];
+        blk->ctx_e = state[4];
+        blk->ctx_f = state[5];
+        blk->ctx_g = state[6];
+        blk->ctx_h = state[7];
+        blk->cty_a = state[8];
+        blk->cty_b = state[9];
+        blk->cty_c = state[10];
+        blk->cty_d = state[11];
+        blk->cty_e = state[12];
+        blk->cty_f = state[13];
+        blk->cty_g = state[14];
+        blk->cty_h = state[15];
+}
+
+
 static const uint32_t diff1targ = 0x0000ffff;
 
 

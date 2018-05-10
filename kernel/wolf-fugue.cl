@@ -314,20 +314,18 @@ __constant const uint mixtab0_c[] = {
 	S[2].s0 = tmp83; S[1].s3 = tmp82; S[1].s2 = tmp81; S[1].s1 = tmp80; S[1].s0 = tmp73; S[0].s3 = tmp72; S[0].s2 = tmp71; S[0].s1 = tmp70; S[0].s0 = tmp63; \
 } while(0)
 
-#undef BYTE0
-#undef BYTE1
-#undef BYTE2
-#undef BYTE3
 
-#define BYTE0(x)	((x) & 0xFF)
-#define BYTE1(x)	(((x) >> 8) & 0xFF)
-#define BYTE2(x)	(((x) >> 16) & 0xFF)
-#define BYTE3(x)	((x) >> 24)
-
-//#define BYTE0(x)	as_uchar4(x).s0
-//#define BYTE1(x)	as_uchar4(x).s1
-//#define BYTE2(x)	as_uchar4(x).s2
-//#define BYTE3(x)	as_uchar4(x).s3
+#ifdef NO_AMD_OPS
+	#define BYTE0(x)	((uchar)(x))
+	#define BYTE1(x)	((uchar)(x >> 8))
+	#define BYTE2(x)	((uchar)(x >> 16))
+	#define BYTE3(x)	((uchar)(x >> 24))
+#else
+	#define BYTE0(x)	(amd_bfe((x), 0U, 8U))
+	#define BYTE1(x)	(amd_bfe((x), 8U, 8U))
+	#define BYTE2(x)	(amd_bfe((x), 16U, 8U))
+	#define BYTE3(x)	(amd_bfe((x), 24U, 8U))
+#endif
 
 void SMIX(__local const uint *restrict mixtab0, __local const uint *restrict mixtab1, __local const uint *restrict mixtab2, __local const uint *restrict mixtab3, uint4 *restrict inout)
 {

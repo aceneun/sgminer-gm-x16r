@@ -844,11 +844,13 @@ static cl_int queue_phi_kernel(struct __clState *clState, struct _dev_blk_ctx *b
 	le_target = *(cl_ulong *)(blk->work->device_target + 24);
 	flip80(clState->cldata, blk->work->data);
 	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+	status |= clEnqueueWriteBuffer(clState->commandQueue, clState->MidstateBuf, true, 0, sizeof(cl_ulong) * 8, blk->work->midstate, 0, NULL, NULL);
 
 	// skein - search
 	kernel = &clState->kernel;
 	num = 0;
 	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->MidstateBuf);
 	CL_SET_ARG(clState->padbuffer8);
 	// jh - search1
 	kernel = clState->extra_kernels;
@@ -1675,7 +1677,7 @@ static algorithm_settings_t algos[] = {
   { "x16s", ALGO_X16S, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16s_regenhash, NULL, NULL, queue_x16s_kernel, gen_hash, append_x13_compiler_options, enqueue_x16s_kernels },
   { "x17", ALGO_X17, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 16,  8 * 16 * 4194304, 0, x17_regenhash, NULL, NULL, queue_x17_kernel, gen_hash, append_x13_compiler_options},
   { "xevan", ALGO_XEVAN, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 33, 8 * 16 * 4194304, 0, xevan_regenhash, NULL, NULL, queue_xevan_kernel, gen_hash, append_x13_compiler_options },
-  { "phi", ALGO_PHI, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, phi_regenhash, NULL, NULL, queue_phi_kernel, gen_hash, append_x11_compiler_options },
+  { "phi", ALGO_PHI, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, phi_regenhash, phi_midstate, phi_prepare_work, queue_phi_kernel, gen_hash, append_x11_compiler_options },
 
   { "talkcoin-mod", ALGO_NIST, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 8 * 16 * 4194304, 0, talkcoin_regenhash, NULL, NULL, queue_talkcoin_mod_kernel, gen_hash, append_x11_compiler_options },
 
@@ -1782,6 +1784,7 @@ static const char *lookup_algorithm_alias(const char *lookup_alias, uint8_t *nfa
   ALGO_ALIAS("x16s", "x16s");
   ALGO_ALIAS("x17", "x17");
   ALGO_ALIAS("xevan", "xevan");
+  ALGO_ALIAS("phi", "phi");
   ALGO_ALIAS("nist5", "talkcoin-mod");
   ALGO_ALIAS("keccak", "maxcoin");
   ALGO_ALIAS("whirlpool", "whirlcoin");

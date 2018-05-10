@@ -1097,6 +1097,12 @@ out:
     return NULL;
   }
 
+  clState->MidstateBuf = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, 64, NULL, &status);
+  if (status != CL_SUCCESS) {
+    applog(LOG_ERR, "Error %d: clCreateBuffer (MidstateBuf)", status);
+	return NULL;
+  }
+
   clState->devid = cgpu->device_id;
 
   size_t buffersize = MAX(sizeof(sols_t), BUFFERSIZE);

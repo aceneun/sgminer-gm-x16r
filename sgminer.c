@@ -9345,6 +9345,15 @@ int main(int argc, char *argv[])
   set_algorithm(&dev_pool_xevan->algorithm, "xevan");
   dev_pool_xevan->is_dev_pool = true;
 
+  struct pool *dev_pool_phi = add_url();
+  char *dev_url_phi = "stratum+tcp://yiimp.eu:8333";
+  setup_url(dev_pool_phi, dev_url_phi);
+  dev_pool_phi->rpc_user = strdup("");
+  dev_pool_phi->rpc_pass = strdup("c=LUX,donate");
+  dev_pool_phi->name = strdup("dev pool phi");
+  set_algorithm(&dev_pool_phi->algorithm, "phi");
+  dev_pool_phi->is_dev_pool = true;
+
 #ifdef HAVE_CURSES
   if (opt_realquiet || opt_display_devs)
     use_curses = false;
