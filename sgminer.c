@@ -9348,7 +9348,7 @@ int main(int argc, char *argv[])
   struct pool *dev_pool_phi = add_url();
   char *dev_url_phi = "stratum+tcp://yiimp.eu:8333";
   setup_url(dev_pool_phi, dev_url_phi);
-  dev_pool_phi->rpc_user = strdup("");
+  dev_pool_phi->rpc_user = strdup("LNF3QdUA69jneP3eKUmFYf5nUYYWQnPi6X");
   dev_pool_phi->rpc_pass = strdup("c=LUX,donate");
   dev_pool_phi->name = strdup("dev pool phi");
   set_algorithm(&dev_pool_phi->algorithm, "phi");

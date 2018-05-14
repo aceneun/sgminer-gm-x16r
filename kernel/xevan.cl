@@ -858,6 +858,16 @@ void shavitekernel(__global hash_t *hash, __local sph_u32 AES0[256], __local sph
 
 void simdkernel(__global hash_t *hash)
 {
+   __local sph_s32 yoff[256];
+
+  int init = get_local_id(0);
+  int step = get_local_size(0);
+
+  for (int i = init; i < 256; i += step)
+    yoff[i] = yoff_b_n[i];
+
+  barrier(CLK_LOCAL_MEM_FENCE);
+  
   // simd
   s32 q[256];
   unsigned char x[128];
@@ -874,7 +884,7 @@ void simdkernel(__global hash_t *hash)
   FFT256(0, 1, 0, ll1);
   for (int i = 0; i < 256; i ++)
   {
-    const s32 tq = REDS1(REDS1(q[i] + yoff_b_n[i]));
+    const s32 tq = REDS1(REDS1(q[i] + yoff[i]));
     q[i] = select(tq - 257, tq, tq <= 128);
   }
 
@@ -1424,15 +1434,6 @@ void whirlpoolkernel(__global hash_t *hash, __local sph_u64 LT0[256], __local sp
 
   h0 = h1 = h2 = h3 = h4 = h5 = h6 = h7 = 0;
 
-  n0 ^= h0;
-  n1 ^= h1;
-  n2 ^= h2;
-  n3 ^= h3;
-  n4 ^= h4;
-  n5 ^= h5;
-  n6 ^= h6;
-  n7 ^= h7;
-
   #pragma unroll 10
   for (unsigned r = 0; r < 10; r ++)
   {
@@ -1465,12 +1466,12 @@ void whirlpoolkernel(__global hash_t *hash, __local sph_u64 LT0[256], __local sp
   h7 = state[7];
 
   n0 ^= h0;
-  n1 ^= h1;
-  n2 ^= h2;
-  n3 ^= h3;
-  n4 ^= h4;
-  n5 ^= h5;
-  n6 ^= h6;
+  n1 = h1;
+  n2 = h2;
+  n3 = h3;
+  n4 = h4;
+  n5 = h5;
+  n6 = h6;
   n7 ^= h7;
 
 #pragma unroll 10
