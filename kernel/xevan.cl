@@ -117,7 +117,7 @@ ulong ROTL64_2(const uint2 vv, const int r) { return as_ulong((amd_bitalign((vv)
 #include "cubehash.cl"
 #include "shavite.cl"
 #include "simd.cl"
-#include "echo.cl"
+#include "wolf-echo.cl"
 #include "hamsi.cl"
 #include "fugue.cl"
 #include "shabal.cl"
@@ -986,158 +986,19 @@ void simdkernel(__global hash_t *hash)
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-void echokernel(__global hash_t *hash, __local sph_u32 AES0[256], __local sph_u32 AES1[256], __local sph_u32 AES2[256], __local sph_u32 AES3[256])
+void echokernel(__global hash_t *hash, __local uint AES0_WOLF[256], const __local uint AES1_WOLF[256], const __local uint AES2_WOLF[256], const __local uint AES3_WOLF[256])
 {
 	// echo
-	sph_u64 W00, W01, W10, W11, W20, W21, W30, W31, W40, W41, W50, W51, W60, W61, W70, W71, W80, W81, W90, W91, WA0, WA1, WB0, WB1, WC0, WC1, WD0, WD1, WE0, WE1, WF0, WF1;
-	sph_u64 Vb00, Vb01, Vb10, Vb11, Vb20, Vb21, Vb30, Vb31, Vb40, Vb41, Vb50, Vb51, Vb60, Vb61, Vb70, Vb71;
-	Vb00 = Vb10 = Vb20 = Vb30 = Vb40 = Vb50 = Vb60 = Vb70 = 512UL;
-	Vb01 = Vb11 = Vb21 = Vb31 = Vb41 = Vb51 = Vb61 = Vb71 = 0;
-
-	sph_u32 K0 = 1024;
-	sph_u32 K1 = 0;
-	sph_u32 K2 = 0;
-	sph_u32 K3 = 0;
-
-	W00 = Vb00;
-	W01 = Vb01;
-	W10 = Vb10;
-	W11 = Vb11;
-	W20 = Vb20;
-	W21 = Vb21;
-	W30 = Vb30;
-	W31 = Vb31;
-	W40 = Vb40;
-	W41 = Vb41;
-	W50 = Vb50;
-	W51 = Vb51;
-	W60 = Vb60;
-	W61 = Vb61;
-	W70 = Vb70;
-	W71 = Vb71;
-	W80 = hash->h8[0];
-	W81 = hash->h8[1];
-	W90 = hash->h8[2];
-	W91 = hash->h8[3];
-	WA0 = hash->h8[4];
-	WA1 = hash->h8[5];
-	WB0 = hash->h8[6];
-	WB1 = hash->h8[7];
-	WC0 = 0;
-	WC1 = 0;
-	WD0 = 0;
-	WD1 = 0;
-	WE0 = 0;
-	WE1 = 0;
-	WF0 = 0;
-	WF1 = 0;
-
-	#pragma unroll 1
-	for (unsigned u = 0; u < 10; u++)
-	{
-		BIG_ROUND;
-	}
-
-	Vb00 ^= hash->h8[0] ^ W00 ^ W80;
-	Vb01 ^= hash->h8[1] ^ W01 ^ W81;
-	Vb10 ^= hash->h8[2] ^ W10 ^ W90;
-	Vb11 ^= hash->h8[3] ^ W11 ^ W91;
-	Vb20 ^= hash->h8[4] ^ W20 ^ WA0;
-	Vb21 ^= hash->h8[5] ^ W21 ^ WA1;
-	Vb30 ^= hash->h8[6] ^ W30 ^ WB0;
-	Vb31 ^= hash->h8[7] ^ W31 ^ WB1;
-	Vb40 ^= W40 ^ WC0;
-	Vb41 ^= W41 ^ WC1;
-	Vb50 ^= W50 ^ WD0;
-	Vb51 ^= W51 ^ WD1;
-	Vb60 ^= W60 ^ WE0;
-	Vb61 ^= W61 ^ WE1;
-	Vb70 ^= W70 ^ WF0;
-	Vb71 ^= W71 ^ WF1;
-
-
-	W00 = Vb00;
-	W01 = Vb01;
-	W10 = Vb10;
-	W11 = Vb11;
-	W20 = Vb20;
-	W21 = Vb21;
-	W30 = Vb30;
-	W31 = Vb31;
-	W40 = Vb40;
-	W41 = Vb41;
-	W50 = Vb50;
-	W51 = Vb51;
-	W60 = Vb60;
-	W61 = Vb61;
-	W70 = Vb70;
-	W71 = Vb71;
-	W80 = 0x80;
-	W81 = W90 = W91 = WA0 = WA1 = WB0 = WB1 = WC0 = WC1 = WD0 = WD1 = WE0 = 0;
-	WE1 = 0x200000000000000;
-	WF0 = 0x400;
-	WF1 = 0;
-	K0 = K1 = K2 = K3 = 0;
-
-	#pragma unroll 1
-	for (unsigned u = 0; u < 10; u++)
-	{
-		BIG_ROUND;
-	}
-
-	Vb00 ^= 0x80 ^ W00 ^ W80;
-	Vb01 ^= W01 ^ W81;
-	Vb10 ^= W10 ^ W90;
-	Vb11 ^= W11 ^ W91;
-	Vb20 ^= W20 ^ WA0;
-	Vb21 ^= W21 ^ WA1;
-	Vb30 ^= W30 ^ WB0;
-	Vb31 ^= W31 ^ WB1;
-
-	hash->h8[0] = Vb00;
-	hash->h8[1] = Vb01;
-	hash->h8[2] = Vb10;
-	hash->h8[3] = Vb11;
-	hash->h8[4] = Vb20;
-	hash->h8[5] = Vb21;
-	hash->h8[6] = Vb30;
-	hash->h8[7] = Vb31;
-
-	barrier(CLK_GLOBAL_MEM_FENCE);
-
-
-	/*
-	__local uint AES0_WOLF[256], AES1_WOLF[256], AES2_WOLF[256], AES3_WOLF[256];
-
-	const uint step = get_local_size(0);
-
-	for(int i = get_local_id(0); i < 256; i += step)
-	{
-		const uint tmp = AES0_C[i];
-		AES0_WOLF[i] = tmp;
-		AES1_WOLF[i] = rotate(tmp, 8U);
-		AES2_WOLF[i] = rotate(tmp, 16U);
-		AES3_WOLF[i] = rotate(tmp, 24U);
-	}
-
-	// echo
 	uint4 W[16];
-
 	#pragma unroll
-	for(int i = 0; i < 8; ++i) W[i] = (uint4)(512, 0, 0, 0);
-
+	for(int i = 0; i < 8; ++i) {
+	    W[i] = (uint4)(512, 0, 0, 0);
+	}
 	((uint16 *)W)[2] = vload16(0, hash->h4);
-
-	//W[12] = (uint4)(0x80, 0, 0, 0);
-	//W[13] = (uint4)(0, 0, 0, 0);
-	//W[14] = (uint4)(0, 0, 0, 0x02000000);
-	//W[15] = (uint4)(512, 0, 0, 0);
-
 	W[12] = (uint4)(0, 0, 0, 0);
 	W[13] = (uint4)(0, 0, 0, 0);
 	W[14] = (uint4)(0, 0, 0, 0);
 	W[15] = (uint4)(0, 0, 0, 0);
-
 	mem_fence(CLK_LOCAL_MEM_FENCE);
 
 	#pragma unroll 1
@@ -1147,23 +1008,26 @@ void echokernel(__global hash_t *hash, __local sph_u32 AES0[256], __local sph_u3
 		BigShiftRows(W);
 		BigMixColumns(W);
 	}
-
 	#pragma unroll
-	for(int i = 0; i < 4; ++i) W[i] ^= vload4(i, hash->h4) ^  W[i + 8] ^ (uint4)(512U, 0, 0, 0);
-
-	for(int i = 4; i < 8; ++i) W[i] ^= W[i + 8];
-
+	for(int i = 0; i < 4; ++i) {
+	    W[i] ^= vload4(i, hash->h4) ^  W[i + 8] ^ (uint4)(512, 0, 0, 0);
+	}
+	
+	#pragma unroll
+	for(int i = 4; i < 8; ++i) {
+	    W[i] ^= W[i + 8] ^ (uint4)(512, 0, 0, 0);
+	}
 	uint4 tmp[4];
-
 	((uint16 *)tmp)[0] = ((uint16 *)W)[0];
-
-	((uint16 *)W)[2] = (uint16)(0U);
-	((uint16 *)W)[3] = (uint16)(0U);
-
-	W[8].s0 = 0x80;
-	W[14] = (uint4)(0, 0, 0, 0x02000000);
+	W[8] = (uint4)(0x80, 0, 0, 0);
+	W[9] = (uint4)(0, 0, 0, 0);
+	W[10] = (uint4)(0, 0, 0, 0);
+	W[11] = (uint4)(0, 0, 0, 0);
+	W[12] = (uint4)(0, 0, 0, 0);
+	W[13] = (uint4)(0, 0, 0, 0);
+	W[14] = (uint4)(0, 0, 0, 0x2000000);
 	W[15] = (uint4)(1024, 0, 0, 0);
-
+	
 	#pragma unroll 1
 	for(uchar i = 0; i < 10; ++i)
 	{
@@ -1171,14 +1035,11 @@ void echokernel(__global hash_t *hash, __local sph_u32 AES0[256], __local sph_u3
 		BigShiftRows(W);
 		BigMixColumns(W);
 	}
-
 	((uint16 *)W)[0] ^= ((uint16 *)tmp)[0] ^ ((uint16 *)W)[2];
-
 	W[0].s0 ^= 0x80;
-
 	for(int i = 0; i < 4; ++i) vstore4(W[i], i, hash->h4);
 	barrier(CLK_GLOBAL_MEM_FENCE);
-	*/
+	
 }
 
 void hamsikernel(__global hash_t *hash)
@@ -1897,24 +1758,19 @@ __kernel void search10(__global hash_t* hashes)
   uint gid = get_global_id(0);
   uint offset = get_global_offset(0);
   __global hash_t *hash = &(hashes[gid - offset]);
+  
+  __local uint AES0_WOLF[256], AES1_WOLF[256], AES2_WOLF[256], AES3_WOLF[256];
+	const uint step = get_local_size(0);
+	for(int i = get_local_id(0); i < 256; i += step)
+	{
+		const uint tmp = AES0_C[i];
+		AES0_WOLF[i] = tmp;
+		AES1_WOLF[i] = rotate(tmp, 8U);
+		AES2_WOLF[i] = rotate(tmp, 16U);
+		AES3_WOLF[i] = rotate(tmp, 24U);
+	}
 
-  __local sph_u32 AES0[256], AES1[256], AES2[256], AES3[256];
-
-  int init = get_local_id(0);
-  int step = get_local_size(0);
-
-  for(int i = get_local_id(0); i < 256; i += step)
-  {
-	const uint tmp = AES0_C[i];
-	AES0[i] = tmp;
-	AES1[i] = rotate(tmp, 8U);
-	AES2[i] = rotate(tmp, 16U);
-	AES3[i] = rotate(tmp, 24U);
-  }
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  echokernel(hash, AES0, AES1, AES2, AES3);
+  echokernel(hash, AES0_WOLF, AES1_WOLF, AES2_WOLF, AES3_WOLF);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -2122,24 +1978,19 @@ __kernel void search27(__global hash_t* hashes)
   uint gid = get_global_id(0);
   uint offset = get_global_offset(0);
   __global hash_t *hash = &(hashes[gid - offset]);
+  
+  __local uint AES0_WOLF[256], AES1_WOLF[256], AES2_WOLF[256], AES3_WOLF[256];
+	const uint step = get_local_size(0);
+	for(int i = get_local_id(0); i < 256; i += step)
+	{
+		const uint tmp = AES0_C[i];
+		AES0_WOLF[i] = tmp;
+		AES1_WOLF[i] = rotate(tmp, 8U);
+		AES2_WOLF[i] = rotate(tmp, 16U);
+		AES3_WOLF[i] = rotate(tmp, 24U);
+	}
 
-  __local sph_u32 AES0[256], AES1[256], AES2[256], AES3[256];
-
-  int init = get_local_id(0);
-  int step = get_local_size(0);
-
-  for(int i = get_local_id(0); i < 256; i += step)
-  {
-	const uint tmp = AES0_C[i];
-	AES0[i] = tmp;
-	AES1[i] = rotate(tmp, 8U);
-	AES2[i] = rotate(tmp, 16U);
-	AES3[i] = rotate(tmp, 24U);
-  }
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  echokernel(hash, AES0, AES1, AES2, AES3);
+  echokernel(hash, AES0_WOLF, AES1_WOLF, AES2_WOLF, AES3_WOLF);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))

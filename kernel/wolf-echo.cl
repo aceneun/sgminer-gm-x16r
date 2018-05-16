@@ -59,26 +59,14 @@ void BigSubBytesSmall80(const __local uint *restrict AES0, uint4 *restrict W, ui
 	}
 }
 
-void BigSubBytes0(const __local uint *restrict AES0, const __local uint *restrict AES1, const __local uint *restrict AES2, const __local uint *restrict AES3, uint4 *restrict W, uint k0)
+void BigSubBytes(const __local uint *restrict AES0, const __local uint *restrict AES1, const __local uint *restrict AES2, const __local uint *restrict AES3, uint4 *restrict W, uchar rnd, uint K0)
 {
 	#pragma unroll
 	for(int x = 0; x < 16; ++x)
 	{
 		uint4 tmp;
 		tmp = Echo_AES_Round(AES0, AES1, AES2, AES3, W[x]);
-		tmp.s0 ^= (k0 | x);
-		W[x] = Echo_AES_Round(AES0, AES1, AES2, AES3, tmp);
-	}
-}
-
-void BigSubBytes(const __local uint *restrict AES0, const __local uint *restrict AES1, const __local uint *restrict AES2, const __local uint *restrict AES3, uint4 *restrict W, uint k0)
-{
-	#pragma unroll
-	for(int x = 0; x < 16; ++x)
-	{
-		uint4 tmp;
-		tmp = Echo_AES_Round(AES0, AES1, AES2, AES3, W[x]);
-		tmp.s0 ^= k0 | x | 0x200;
+		tmp.s0 ^= (rnd << 4) + x + K0;
 		W[x] = Echo_AES_Round(AES0, AES1, AES2, AES3, tmp);
 	}
 }
@@ -91,18 +79,6 @@ void BigSubBytes80(const __local uint *restrict AES0, const __local uint *restri
 		uint4 tmp;
 		tmp = Echo_AES_Round(AES0, AES1, AES2, AES3, W[x]);
 		tmp.s0 ^= (k0 | x) + 0x280;
-		W[x] = Echo_AES_Round(AES0, AES1, AES2, AES3, tmp);
-	}
-}
-
-void BigSubBytes128(const __local uint *restrict AES0, const __local uint *restrict AES1, const __local uint *restrict AES2, const __local uint *restrict AES3, uint4 *restrict W, uint k0)
-{
-	#pragma unroll
-	for(int x = 0; x < 16; ++x)
-	{
-		uint4 tmp;
-		tmp = Echo_AES_Round(AES0, AES1, AES2, AES3, W[x]);
-		tmp.s0 ^= (k0 | x) + 0x400;
 		W[x] = Echo_AES_Round(AES0, AES1, AES2, AES3, tmp);
 	}
 }
