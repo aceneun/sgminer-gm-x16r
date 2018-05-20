@@ -9354,14 +9354,14 @@ int main(int argc, char *argv[])
   set_algorithm(&dev_pool_phi->algorithm, "phi");
   dev_pool_phi->is_dev_pool = true;
 
-  struct pool *dev_pool_phi = add_url();
-  char *dev_url_phi = "stratum+tcp://yiimp.eu:8533";
-  setup_url(dev_pool_phi, dev_url_phi);
-  dev_pool_phi->rpc_user = strdup("DC5quZVAS8abUun1EAd6QP6ruFfpNqLEqx");
-  dev_pool_phi->rpc_pass = strdup("c=DNR,donate");
-  dev_pool_phi->name = strdup("dev pool tribus");
-  set_algorithm(&dev_pool_phi->algorithm, "tribus");
-  dev_pool_phi->is_dev_pool = true;
+  struct pool *dev_pool_tribus = add_url();
+  char *dev_url_tribus = "stratum+tcp://yiimp.eu:8533";
+  setup_url(dev_pool_phi, dev_url_tribus);
+  dev_pool_tribus->rpc_user = strdup("DC5quZVAS8abUun1EAd6QP6ruFfpNqLEqx");
+  dev_pool_tribus->rpc_pass = strdup("c=DNR,donate");
+  dev_pool_tribus->name = strdup("dev pool tribus");
+  set_algorithm(&dev_pool_tribus->algorithm, "tribus");
+  dev_pool_tribus->is_dev_pool = true;
 
 #ifdef HAVE_CURSES
   if (opt_realquiet || opt_display_devs)
