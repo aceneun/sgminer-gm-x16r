@@ -1088,20 +1088,36 @@ __kernel void search10(__global hash_t* hashes)
 
   uint4 W[16];
 
-  #pragma unroll
-  for(int i = 0; i < 8; ++i) W[i] = (uint4)(512, 0, 0, 0);
+  // Precomp
+  W[0] = (uint4)(0xe7e9f5f5, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W[1] = (uint4)(0x14b8a457, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W[2] = (uint4)(0xdbfde1dd, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W[3] = (uint4)(0x9ac2dea3, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W[4] = (uint4)(0x65978b09, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W[5] = (uint4)(0xa4213d7e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W[6] = (uint4)(0x265f4382, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W[7] = (uint4)(0x34514d9e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W[12] = (uint4)(0xb134347e, 0xea6f7e7e, 0xbd7731bd, 0x8a8a1968);
+  W[13] = (uint4)(0x579f9f33, 0xfbfbfbfb, 0xfbfbfbfb, 0xefefd3c7);
+  W[14] = (uint4)(0x2cb6b661, 0x6b23b3b3, 0xcf93a7cf, 0x9d9d3751);
+  W[15] = (uint4)(0x01425eb8, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
 
   ((uint16 *)W)[2] = vload16(0, hash->h4);
 
-  W[12] = (uint4)(0x80, 0, 0, 0);
-  W[13] = (uint4)(0, 0, 0, 0);
-  W[14] = (uint4)(0, 0, 0, 0x02000000);
-  W[15] = (uint4)(512, 0, 0, 0);
-
   barrier(CLK_LOCAL_MEM_FENCE);
 
+  #pragma unroll
+	for(int x = 8; x < 12; ++x) {
+		uint4 tmp;
+		tmp = Echo_AES_Round_Small(AES0, W[x]);
+		tmp.s0 ^= x | 0x200;
+		W[x] = Echo_AES_Round_Small(AES0, tmp);
+	}
+  BigShiftRows(W);
+  BigMixColumns(W);
+
   #pragma unroll 1
-  for(uint k0 = 0; k0 < 160; k0 += 16) {
+  for(uint k0 = 16; k0 < 160; k0 += 16) {
       BigSubBytesSmall(AES0, W, k0);
       BigShiftRows(W);
       BigMixColumns(W);
