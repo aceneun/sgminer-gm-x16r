@@ -1631,7 +1631,7 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 //  clFinish(clState->commandQueue);
   }
 
-  return hashes;
+  return hashes; 
 }
 
 // Cleanup OpenCL memory on the GPU

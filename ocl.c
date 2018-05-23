@@ -1091,13 +1091,13 @@ out:
   }
 
   applog(LOG_DEBUG, "Using read buffer sized %lu", (unsigned long)readbufsize);
-  clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, readbufsize, NULL, &status);
+  clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY | CL_MEM_USE_PERSISTENT_MEM_AMD, readbufsize, NULL, &status);
   if (status != CL_SUCCESS) {
     applog(LOG_ERR, "Error %d: clCreateBuffer (CLbuffer0)", status);
     return NULL;
   }
 
-  clState->MidstateBuf = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, 64, NULL, &status);
+  clState->MidstateBuf = clCreateBuffer(clState->context, CL_MEM_READ_ONLY | CL_MEM_USE_PERSISTENT_MEM_AMD, 64, NULL, &status);
   if (status != CL_SUCCESS) {
     applog(LOG_ERR, "Error %d: clCreateBuffer (MidstateBuf)", status);
 	return NULL;
@@ -1107,7 +1107,7 @@ out:
 
   size_t buffersize = MAX(sizeof(sols_t), BUFFERSIZE);
   applog(LOG_DEBUG, "Using output buffer sized %lu", buffersize);
-  clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, buffersize, NULL, &status);
+  clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY | CL_MEM_USE_PERSISTENT_MEM_AMD, buffersize, NULL, &status);
   if (status != CL_SUCCESS) {
     applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
     return NULL;
