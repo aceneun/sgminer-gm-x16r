@@ -287,6 +287,9 @@
     <ClCompile Include="..\algorithm\tribus.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
+    <ClCompile Include="..\algorithm\aergo.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\adl.h">
@@ -554,6 +557,9 @@
       <Filter>Header Files\sph</Filter>
     </ClInclude>
     <ClInclude Include="..\algorithm\tribus.h">
+      <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\algorithm\aergo.h">
       <Filter>Header Files\algorithm</Filter>
     </ClInclude>
   </ItemGroup>

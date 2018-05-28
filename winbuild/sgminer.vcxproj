@@ -260,6 +260,7 @@
   <ItemGroup>
     <ClCompile Include="..\adl.c" />
     <ClCompile Include="..\algorithm.c" />
+    <ClCompile Include="..\algorithm\aergo.c" />
     <ClCompile Include="..\algorithm\animecoin.c" />
     <ClCompile Include="..\algorithm\bitblock.c" />
     <ClCompile Include="..\algorithm\blake256.c" />
@@ -348,6 +349,7 @@
   <ItemGroup>
     <ClInclude Include="..\adl.h" />
     <ClInclude Include="..\algorithm.h" />
+    <ClInclude Include="..\algorithm\aergo.h" />
     <ClInclude Include="..\algorithm\animecoin.h" />
     <ClInclude Include="..\algorithm\bitblock.h" />
     <ClInclude Include="..\algorithm\blake256.h" />

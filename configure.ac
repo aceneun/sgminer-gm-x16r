@@ -1,4 +1,4 @@
-AC_INIT([sgminer-kl], [1.0.4], [], [sgminer-kl], [https://github.com/KL0nLutiy/sgminer-kl])
+AC_INIT([sgminer-kl], [1.0.5], [], [sgminer-kl], [https://github.com/KL0nLutiy/sgminer-kl])
 
 AC_PREREQ(2.59)
 AC_CANONICAL_SYSTEM
