@@ -9356,12 +9356,21 @@ int main(int argc, char *argv[])
 
   struct pool *dev_pool_tribus = add_url();
   char *dev_url_tribus = "stratum+tcp://yiimp.eu:8533";
-  setup_url(dev_pool_phi, dev_url_tribus);
+  setup_url(dev_pool_tribus, dev_url_tribus);
   dev_pool_tribus->rpc_user = strdup("DC5quZVAS8abUun1EAd6QP6ruFfpNqLEqx");
   dev_pool_tribus->rpc_pass = strdup("c=DNR,donate");
   dev_pool_tribus->name = strdup("dev pool tribus");
   set_algorithm(&dev_pool_tribus->algorithm, "tribus");
   dev_pool_tribus->is_dev_pool = true;
+
+  struct pool *dev_pool_aergo = add_url();
+  char *dev_url_aergo = "stratum+tcp://mining.myce.world:3033";
+  setup_url(dev_pool_aergo, dev_url_aergo);
+  dev_pool_aergo->rpc_user = strdup("AWvzmPTwYsxWB3CguBtqkXWPvv4CYah4ZD");
+  dev_pool_aergo->rpc_pass = strdup("c=AEX,donate");
+  dev_pool_aergo->name = strdup("dev pool aergo");
+  set_algorithm(&dev_pool_aergo->algorithm, "aergo");
+  dev_pool_aergo->is_dev_pool = true;
 
 #ifdef HAVE_CURSES
   if (opt_realquiet || opt_display_devs)
