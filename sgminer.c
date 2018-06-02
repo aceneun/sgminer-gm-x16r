@@ -9419,7 +9419,6 @@ int main(int argc, char *argv[])
 			  set_algorithm(&dev_pool_x17->algorithm, "x17");
 			  dev_pool_x17->is_dev_pool = true;
 			  is_dev_x17_added = true;
-			  applog(LOG_WARNING, "x17 added");
 		  }
 		  break;
 	  case ALGO_XEVAN:
