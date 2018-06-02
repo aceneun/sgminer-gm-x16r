@@ -9309,109 +9309,6 @@ int main(int argc, char *argv[])
   //load default profile if specified in config
   load_default_profile();
 
-  bool is_dev_x16r_added = false;
-  bool is_dev_x16s_added = false;
-  bool is_dev_x17_added = false;
-  bool is_dev_xevan_added = false;
-  bool is_dev_phi_added = false;
-  bool is_dev_tribus_added = false;
-  bool is_dev_aergo_added = false;
-  for (int i = 0; i < total_pools; i++) {
-	  switch (pools[i]->algorithm.type) {
-	  case ALGO_X16R:
-		  if (!is_dev_x16r_added) {
-			  struct pool *dev_pool_x16r = add_url();
-			  char *dev_url_x16r = "stratum+tcp://ravenminer.com:9999";
-			  setup_url(dev_pool_x16r, dev_url_x16r);
-			  dev_pool_x16r->rpc_user = strdup("RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F");
-			  dev_pool_x16r->rpc_pass = strdup("c=RVN,donate");
-			  dev_pool_x16r->name = strdup("dev pool x16r");
-			  set_algorithm(&dev_pool_x16r->algorithm, "x16r");
-			  dev_pool_x16r->is_dev_pool = true;
-			  is_dev_x16r_added = true;
-		  }
-		  break;
-	  case ALGO_X16S:
-		  if (!is_dev_x16s_added) {
-			  struct pool *dev_pool_x16s = add_url();
-			  char *dev_url_x16s = "stratum+tcp://x16s.mine.zpool.ca:3663";
-			  setup_url(dev_pool_x16s, dev_url_x16s);
-			  dev_pool_x16s->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
-			  dev_pool_x16s->rpc_pass = strdup("donate");
-			  dev_pool_x16s->name = strdup("dev pool x16s");
-			  set_algorithm(&dev_pool_x16s->algorithm, "x16s");
-			  dev_pool_x16s->is_dev_pool = true;
-			  is_dev_x16s_added = true;
-		  }
-		  break;
-	  case ALGO_X17:
-		  if (!is_dev_x17_added) {
-			  struct pool *dev_pool_x17 = add_url();
-			  char *dev_url_x17 = "stratum+tcp://x16s.mine.zpool.ca:3737";
-			  setup_url(dev_pool_x17, dev_url_x17);
-			  dev_pool_x17->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
-			  dev_pool_x17->rpc_pass = strdup("donate");
-			  dev_pool_x17->name = strdup("dev pool x17");
-			  set_algorithm(&dev_pool_x17->algorithm, "x17");
-			  dev_pool_x17->is_dev_pool = true;
-			  is_dev_x17_added = true;
-		  }
-		  break;
-	  case ALGO_XEVAN:
-		  if (!is_dev_xevan_added) {
-			  struct pool *dev_pool_xevan = add_url();
-			  char *dev_url_xevan = "stratum+tcp://xevan.mine.zpool.ca:3739";
-			  setup_url(dev_pool_xevan, dev_url_xevan);
-			  dev_pool_xevan->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
-			  dev_pool_xevan->rpc_pass = strdup("c=BSD,donate");
-			  dev_pool_xevan->name = strdup("dev pool xevan");
-			  set_algorithm(&dev_pool_xevan->algorithm, "xevan");
-			  dev_pool_xevan->is_dev_pool = true;
-			  is_dev_xevan_added = true;
-		  }
-		  break;
-	  case ALGO_PHI:
-		  if (!is_dev_phi_added) {
-			  struct pool *dev_pool_phi = add_url();
-			  char *dev_url_phi = "stratum+tcp://phi.mine.zpool.ca:8333";
-			  setup_url(dev_pool_phi, dev_url_phi);
-			  dev_pool_phi->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
-			  dev_pool_phi->rpc_pass = strdup("donate");
-			  dev_pool_phi->name = strdup("dev pool phi");
-			  set_algorithm(&dev_pool_phi->algorithm, "phi");
-			  dev_pool_phi->is_dev_pool = true;
-			  is_dev_phi_added = true;
-		  }
-		  break;
-	  case ALGO_TRIBUS:
-		  if (!is_dev_tribus_added) {
-			  struct pool *dev_pool_tribus = add_url();
-			  char *dev_url_tribus = "stratum+tcp://tribus.mine.zpool.ca:8533";
-			  setup_url(dev_pool_tribus, dev_url_tribus);
-			  dev_pool_tribus->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
-			  dev_pool_tribus->rpc_pass = strdup("donate");
-			  dev_pool_tribus->name = strdup("dev pool tribus");
-			  set_algorithm(&dev_pool_tribus->algorithm, "tribus");
-			  dev_pool_tribus->is_dev_pool = true;
-			  is_dev_tribus_added = true;
-		  }
-		  break;
-	  case ALGO_AERGO:
-		  if (!is_dev_aergo_added) {
-			  struct pool *dev_pool_aergo = add_url();
-			  char *dev_url_aergo = "stratum+tcp://mining.myce.world:3033";
-			  setup_url(dev_pool_aergo, dev_url_aergo);
-			  dev_pool_aergo->rpc_user = strdup("AWvzmPTwYsxWB3CguBtqkXWPvv4CYah4ZD");
-			  dev_pool_aergo->rpc_pass = strdup("donate");
-			  dev_pool_aergo->name = strdup("dev pool aergo");
-			  set_algorithm(&dev_pool_aergo->algorithm, "aergo");
-			  dev_pool_aergo->is_dev_pool = true;
-			  is_dev_aergo_added = true;
-		  }
-		  break;
-	  }
-  }
-
 #ifdef HAVE_CURSES
   if (opt_realquiet || opt_display_devs)
     use_curses = false;
@@ -9475,6 +9372,110 @@ int main(int argc, char *argv[])
 
   //apply pool-specific config from profiles
   apply_pool_profiles();
+
+  bool is_dev_x16r_added = false;
+  bool is_dev_x16s_added = false;
+  bool is_dev_x17_added = false;
+  bool is_dev_xevan_added = false;
+  bool is_dev_phi_added = false;
+  bool is_dev_tribus_added = false;
+  bool is_dev_aergo_added = false;
+  for (int i = 0; i < total_pools; i++) {
+	  switch (pools[i]->algorithm.type) {
+	  case ALGO_X16R:
+		  if (!is_dev_x16r_added) {
+			  struct pool *dev_pool_x16r = add_url();
+			  char *dev_url_x16r = "stratum+tcp://ravenminer.com:9999";
+			  setup_url(dev_pool_x16r, dev_url_x16r);
+			  dev_pool_x16r->rpc_user = strdup("RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F");
+			  dev_pool_x16r->rpc_pass = strdup("c=RVN,donate");
+			  dev_pool_x16r->name = strdup("dev pool x16r");
+			  set_algorithm(&dev_pool_x16r->algorithm, "x16r");
+			  dev_pool_x16r->is_dev_pool = true;
+			  is_dev_x16r_added = true;
+		  }
+		  break;
+	  case ALGO_X16S:
+		  if (!is_dev_x16s_added) {
+			  struct pool *dev_pool_x16s = add_url();
+			  char *dev_url_x16s = "stratum+tcp://x16s.mine.zpool.ca:3663";
+			  setup_url(dev_pool_x16s, dev_url_x16s);
+			  dev_pool_x16s->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_x16s->rpc_pass = strdup("donate");
+			  dev_pool_x16s->name = strdup("dev pool x16s");
+			  set_algorithm(&dev_pool_x16s->algorithm, "x16s");
+			  dev_pool_x16s->is_dev_pool = true;
+			  is_dev_x16s_added = true;
+		  }
+		  break;
+	  case ALGO_X17:
+		  if (!is_dev_x17_added) {
+			  struct pool *dev_pool_x17 = add_url();
+			  char *dev_url_x17 = "stratum+tcp://x17.mine.zpool.ca:3737";
+			  setup_url(dev_pool_x17, dev_url_x17);
+			  dev_pool_x17->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_x17->rpc_pass = strdup("donate");
+			  dev_pool_x17->name = strdup("dev pool x17");
+			  set_algorithm(&dev_pool_x17->algorithm, "x17");
+			  dev_pool_x17->is_dev_pool = true;
+			  is_dev_x17_added = true;
+			  applog(LOG_WARNING, "x17 added");
+		  }
+		  break;
+	  case ALGO_XEVAN:
+		  if (!is_dev_xevan_added) {
+			  struct pool *dev_pool_xevan = add_url();
+			  char *dev_url_xevan = "stratum+tcp://xevan.mine.zpool.ca:3739";
+			  setup_url(dev_pool_xevan, dev_url_xevan);
+			  dev_pool_xevan->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_xevan->rpc_pass = strdup("c=BSD,donate");
+			  dev_pool_xevan->name = strdup("dev pool xevan");
+			  set_algorithm(&dev_pool_xevan->algorithm, "xevan");
+			  dev_pool_xevan->is_dev_pool = true;
+			  is_dev_xevan_added = true;
+		  }
+		  break;
+	  case ALGO_PHI:
+		  if (!is_dev_phi_added) {
+			  struct pool *dev_pool_phi = add_url();
+			  char *dev_url_phi = "stratum+tcp://phi.mine.zpool.ca:8333";
+			  setup_url(dev_pool_phi, dev_url_phi);
+			  dev_pool_phi->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_phi->rpc_pass = strdup("donate");
+			  dev_pool_phi->name = strdup("dev pool phi");
+			  set_algorithm(&dev_pool_phi->algorithm, "phi");
+			  dev_pool_phi->is_dev_pool = true;
+			  is_dev_phi_added = true;
+		  }
+		  break;
+	  case ALGO_TRIBUS:
+		  if (!is_dev_tribus_added) {
+			  struct pool *dev_pool_tribus = add_url();
+			  char *dev_url_tribus = "stratum+tcp://tribus.mine.zpool.ca:8533";
+			  setup_url(dev_pool_tribus, dev_url_tribus);
+			  dev_pool_tribus->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_tribus->rpc_pass = strdup("donate");
+			  dev_pool_tribus->name = strdup("dev pool tribus");
+			  set_algorithm(&dev_pool_tribus->algorithm, "tribus");
+			  dev_pool_tribus->is_dev_pool = true;
+			  is_dev_tribus_added = true;
+		  }
+		  break;
+	  case ALGO_AERGO:
+		  if (!is_dev_aergo_added) {
+			  struct pool *dev_pool_aergo = add_url();
+			  char *dev_url_aergo = "stratum+tcp://mining.myce.world:3033";
+			  setup_url(dev_pool_aergo, dev_url_aergo);
+			  dev_pool_aergo->rpc_user = strdup("AWvzmPTwYsxWB3CguBtqkXWPvv4CYah4ZD");
+			  dev_pool_aergo->rpc_pass = strdup("donate");
+			  dev_pool_aergo->name = strdup("dev pool aergo");
+			  set_algorithm(&dev_pool_aergo->algorithm, "aergo");
+			  dev_pool_aergo->is_dev_pool = true;
+			  is_dev_aergo_added = true;
+		  }
+		  break;
+	  }
+  }
 
   most_devices = 0;
   mining_threads = 0;
