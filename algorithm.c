@@ -1788,7 +1788,7 @@ static algorithm_settings_t algos[] = {
   { "xevan", ALGO_XEVAN, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 33, 8 * 16 * 4194304, 0, xevan_regenhash, NULL, NULL, queue_xevan_kernel, gen_hash, append_x13_compiler_options },
   { "phi", ALGO_PHI, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, phi_regenhash, phi_midstate, phi_prepare_work, queue_phi_kernel, gen_hash, append_x11_compiler_options },
   { "tribus", ALGO_TRIBUS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 2, 8 * 16 * 4194304, 0, tribus_regenhash, NULL, NULL, queue_tribus_kernel, gen_hash, append_x11_compiler_options },
-  { "aergo", ALGO_AERGO, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 27, 8 * 16 * 4194304, 0, aergo_regenhash, NULL, NULL, queue_aergo_kernel, gen_hash, append_x13_compiler_options },
+  { "aergo", ALGO_AERGO, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 27, 8 * 16 * 4194304, 0, aergo_regenhash, NULL, NULL, queue_aergo_kernel, gen_hash, append_x13_compiler_options },
 
   { "talkcoin-mod", ALGO_NIST, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 8 * 16 * 4194304, 0, talkcoin_regenhash, NULL, NULL, queue_talkcoin_mod_kernel, gen_hash, append_x11_compiler_options },
 
