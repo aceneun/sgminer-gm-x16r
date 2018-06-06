@@ -336,9 +336,8 @@ void GroestlCompress(ulong *State, ulong *Msg, __local ulong *T0, __local ulong 
 	for(int i = 0; i < 16; ++i) State[i] = Output[i];
 }
 
-void groestlkernel(__global hash_t *hash)
+void groestlkernel(__global hash_t *hash,__local ulong *T0,__local ulong *T1,__local ulong *T2,__local ulong *T3)
 {
-	  __local ulong T0[256], T1[256], T2[256], T3[256];
 	
 	int step = get_local_size(0);
 	int init = get_local_id(0);
@@ -856,9 +855,8 @@ void shavitekernel(__global hash_t *hash, __local sph_u32 AES0[256], __local sph
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-void simdkernel(__global hash_t *hash)
+void simdkernel(__global hash_t *hash,__local sph_s32 *yoff)
 {
-   __local sph_s32 yoff[256];
 
   int init = get_local_id(0);
   int step = get_local_size(0);
@@ -1669,8 +1667,8 @@ __kernel void search2(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-
-  groestlkernel(hash);
+ __local ulong T0[256], T1[256], T2[256], T3[256];
+  groestlkernel(hash,T0,T1,T2,T3);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1748,8 +1746,8 @@ __kernel void search9(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-
-  simdkernel(hash);
+  __local sph_s32 yoff[256];
+  simdkernel(hash,yoff);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1889,8 +1887,8 @@ __kernel void search19(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-
-  groestlkernel(hash);
+  __local ulong T0[256], T1[256], T2[256], T3[256];
+  groestlkernel(hash,T0,T1,T2,T3);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1968,8 +1966,8 @@ __kernel void search26(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-
-  simdkernel(hash);
+  __local sph_s32 yoff[256];
+  simdkernel(hash,yoff);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
