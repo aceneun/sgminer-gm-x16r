@@ -87,11 +87,25 @@ bool get_opencl_platform(int preferred_platform_id, cl_platform_id *platform) {
   for (i = 0; i < numPlatforms; i++) {
     if (preferred_platform_id >= 0 && (int)i != preferred_platform_id)
       continue;
+  
+    // Look for AMD OpenCL platform if prefered platform not set
+    if (preferred_platform_id < 0) {
+      char platformName[1024];
+      clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, 1024, platformName, NULL);
+      if(strstr(platformName, "Advanced Micro Devices") == NULL &&
+        strstr(platformName, "Apple") == NULL)
+          continue;
+    }
 
     *platform = platforms[i];
     ret = true;
     break;
   }
+  
+  if (preferred_platform_id < 0 && !ret) {
+    applog(LOG_ERR, "No AMD platform found. Please manually specify OpenCL platform.");
+  }
+  
 out:
   if (platforms) free(platforms);
   return ret;

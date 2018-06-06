@@ -387,6 +387,7 @@
     <ClInclude Include="..\compat.h" />
     <ClInclude Include="..\algorithm\darkcoin.h" />
     <ClInclude Include="..\config_parser.h" />
+    <ClInclude Include="..\donate.h" />
     <ClInclude Include="..\driver-opencl.h" />
     <ClInclude Include="..\elist.h" />
     <ClInclude Include="..\events.h" />
