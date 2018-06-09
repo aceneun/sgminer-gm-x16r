@@ -1,5 +1,5 @@
 /*
- * XEVAN kernel implementation.
+ * AERGO kernel implementation.
  *
  * ==========================(LICENSE BEGIN)============================
  *
@@ -153,12 +153,8 @@ typedef union {
   ulong h8[8];
 } hash_t;
 
-void echo80kernel(__global ulong* block, uint gid, __global hash_t *hash)
+void echo80kernel(__global ulong* block, uint gid, __global hash_t *hash, __local uint AES0[256])
 {
-  __local uint AES0[256];
-  for(int i = get_local_id(0), step = get_local_size(0); i < 256; i += step)
-    AES0[i] = AES0_C[i];
-
   uint4 W[16];
 
   // Precomp
@@ -177,8 +173,6 @@ void echo80kernel(__global ulong* block, uint gid, __global hash_t *hash)
   ((uint16 *)W)[2] = vload16(0, (__global uint *)block);
 
   W[12] = (uint4)(as_uint2(block[8]).s0, as_uint2(block[8]).s1, as_uint2(block[9]).s0, gid);
-
-  barrier(CLK_LOCAL_MEM_FENCE);
 
   #pragma unroll
 	for(int x = 8; x < 13; ++x) {
@@ -227,26 +221,10 @@ void bmwkernel(__global hash_t *hash)
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-void groestlkernel(__global hash_t *hash)
+void groestlkernel(__global hash_t *hash, __local sph_u64 *T0_C, __local sph_u64 *T1_C, __local sph_u64 *T2, __local sph_u64 *T3, __local sph_u64 *T4, __local sph_u64 *T5, __local sph_u64 *T6, __local sph_u64 *T7)
 {
-  __local sph_u64 T0_C[256], T1_C[256], T2[256], T3[256];
-  __local sph_u64 T4[256], T5[256], T6[256], T7[256];
   uint u;
-  int init = get_local_id(0);
-  int step = get_local_size(0);
-
-  for (int i = init; i < 256; i += step) {
-    // create other tables based on T0: avoids keeping them in the kernel.
-    T0_C[i] = T0[i];
-    T1_C[i] = T1[i];
-    T2[i] = ROTL64(T0[i], 16UL);
-    T3[i] = ROTL64(T0[i], 24UL);
-    T4[i] = ROTL64(T0[i], 32UL);
-    T5[i] = ROTL64(T0[i], 40UL);
-    T6[i] = ROTL64(T0[i], 48UL);
-    T7[i] = ROTL64(T0[i], 56UL);
-  }
-  barrier(CLK_LOCAL_MEM_FENCE);
+  
   #define T0 T0_C
   #define T1 T1_C
 
@@ -812,21 +790,8 @@ void cubehashkernel(__global hash_t *hash)
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-void shavitekernel(__global hash_t *hash)
+void shavitekernel(__global hash_t *hash, __local uint AES0[256], __local uint AES1[256], __local uint AES2[256], __local uint AES3[256])
 {
-	__local uint AES0[256], AES1[256], AES2[256], AES3[256];
-	
-	const int step = get_local_size(0);
-	
-	for(int i = get_local_id(0); i < 256; i += step)
-	{
-		const uint tmp = AES0_C[i];
-		AES0[i] = tmp;
-		AES1[i] = rotate(tmp, 8U);
-		AES2[i] = rotate(tmp, 16U);
-		AES3[i] = rotate(tmp, 24U);
-	}
-	
 	const uint4 h[4] = {(uint4)(0x72FCCDD8, 0x79CA4727, 0x128A077B, 0x40D55AEC), (uint4)(0xD1901A06, 0x430AE307, 0xB29F5CD1, 0xDF07FBFC), \
 						(uint4)(0x8E45D73D, 0x681AB538, 0xBDE86578, 0xDD577E47), (uint4)(0xE275EADE, 0x502D9FCD, 0xB9357178, 0x022A4B9A) };
 	
@@ -836,7 +801,6 @@ void shavitekernel(__global hash_t *hash)
 	rk[4].s0 = 0x80;
 	rk[6].s3 = 0x2000000;
 	rk[7].s3 = 0x2000000;
-	mem_fence(CLK_LOCAL_MEM_FENCE);
 	
 	#pragma unroll 1
 	for(int r = 0; r < 3; ++r)
@@ -927,18 +891,8 @@ void shavitekernel(__global hash_t *hash)
 	barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-void simdkernel(__global hash_t *hash)
+void simdkernel(__global hash_t *hash, __local sph_s32 yoff[256])
 {
-  __local sph_s32 yoff[256];
-
-  int init = get_local_id(0);
-  int step = get_local_size(0);
-
-  for (int i = init; i < 256; i += step)
-    yoff[i] = yoff_b_n[i];
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
   // simd
   s32 q[256];
   unsigned char x[128];
@@ -1052,12 +1006,8 @@ void simdkernel(__global hash_t *hash)
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-void echokernel(__global hash_t *hash)
+void echokernel(__global hash_t *hash, __local uint AES0[256])
 {
-	__local uint AES0[256];
-  for(int i = get_local_id(0), step = get_local_size(0); i < 256; i += step)
-    AES0[i] = AES0_C[i];
-
   uint4 W[16];
 
   // Precomp
@@ -1075,8 +1025,6 @@ void echokernel(__global hash_t *hash)
   W[15] = (uint4)(0x01425eb8, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
 
   ((uint16 *)W)[2] = vload16(0, hash->h4);
-
-  barrier(CLK_LOCAL_MEM_FENCE);
 
   #pragma unroll
 	for(int x = 8; x < 12; ++x) {
@@ -1175,21 +1123,8 @@ void hamsikernel(__global hash_t *hash)
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-void fuguekernel(__global hash_t *hash)
+void fuguekernel(__global hash_t *hash, __local sph_u32 mixtab0[256], __local sph_u32 mixtab1[256], __local sph_u32 mixtab2[256], __local sph_u32 mixtab3[256])
 {
-    // mixtab
-  __local sph_u32 mixtab0[256], mixtab1[256], mixtab2[256], mixtab3[256];
-  int init = get_local_id(0);
-  int step = get_local_size(0);
-  for (int i = init; i < 256; i += step) {
-    mixtab0[i] = mixtab0_c[i];
-    mixtab1[i] = mixtab1_c[i];
-    mixtab2[i] = mixtab2_c[i];
-    mixtab3[i] = mixtab3_c[i];
-  }
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
   sph_u32 S00, S01, S02, S03, S04, S05, S06, S07, S08, S09;
   sph_u32 S10, S11, S12, S13, S14, S15, S16, S17, S18, S19;
   sph_u32 S20, S21, S22, S23, S24, S25, S26, S27, S28, S29;
@@ -1433,22 +1368,12 @@ void whirlpoolkernel(__global hash_t *hash, __local sph_u64 LT0[256], __local sp
   barrier(CLK_GLOBAL_MEM_FENCE);  
 }
 
-void gostkernel(__global hash_t *hash)
+void gostkernel(__global hash_t *hash, __local sph_u64 lT[8][256])
 {
   // gost
 
     sph_u64 message[8], out[8];
     sph_u64 len = 512;
-
-    __local sph_u64 lT[8][256];
-
-    int init = get_local_id(0);
-    int step = get_local_size(0);
-
-    _Pragma("unroll") for(int j=init;j<256;j+=step) {
-        _Pragma("unroll") for (int i=0; i<8; i++) lT[i][j] = T[i][j];
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
 
     message[0] = (hash->h8[0]);
     message[1] = (hash->h8[1]);
@@ -1590,8 +1515,14 @@ __kernel void search(__global unsigned char* block, __global hash_t* hashes)
 {
     uint gid = get_global_id(0);
     __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
+	
+	__local uint AES0[256];
+    for(int i = get_local_id(0), step = get_local_size(0); i < 256; i += step)
+        AES0[i] = AES0_C[i];
+	
+	barrier(CLK_LOCAL_MEM_FENCE);
 
-    echo80kernel(block, gid, hash);
+    echo80kernel(block, gid, hash, AES0);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1599,8 +1530,18 @@ __kernel void search1(__global hash_t* hashes)
 {
  uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
+  
+  __local sph_s32 yoff[256];
 
-  simdkernel(hash);
+  int init = get_local_id(0);
+  int step = get_local_size(0);
+
+  for (int i = init; i < 256; i += step)
+    yoff[i] = yoff_b_n[i];
+
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  simdkernel(hash, yoff);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1653,8 +1594,27 @@ __kernel void search5(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
+  
+  __local sph_u64 T0_C[256], T1_C[256], T2[256], T3[256];
+  __local sph_u64 T4[256], T5[256], T6[256], T7[256];
+  
+  int init = get_local_id(0);
+  int step = get_local_size(0);
 
-  groestlkernel(hash);
+  for (int i = init; i < 256; i += step) {
+    // create other tables based on T0: avoids keeping them in the kernel.
+    T0_C[i] = T0[i];
+    T1_C[i] = T1[i];
+    T2[i] = ROTL64(T0[i], 16UL);
+    T3[i] = ROTL64(T0[i], 24UL);
+    T4[i] = ROTL64(T0[i], 32UL);
+    T5[i] = ROTL64(T0[i], 40UL);
+    T6[i] = ROTL64(T0[i], 48UL);
+    T7[i] = ROTL64(T0[i], 56UL);
+  }
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  groestlkernel(hash, T0_C, T1_C, T2, T3, T4, T5, T6, T7);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1662,8 +1622,19 @@ __kernel void search6(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
+  
+  __local sph_u64 lT[8][256];
 
-  gostkernel(hash);
+    int init = get_local_id(0);
+    int step = get_local_size(0);
+
+    for(int j=init;j<256;j+=step) {
+        for (int i=0; i<8; i++) lT[i][j] = T[i][j];
+    }
+	
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+  gostkernel(hash, lT);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1719,8 +1690,18 @@ __kernel void search12(__global hash_t* hashes)
   uint offset = get_global_offset(0);
   __global hash_t *hash = &(hashes[gid-offset]);
 
+  __local sph_u64 lT[8][256];
 
-  gostkernel(hash);
+    int init = get_local_id(0);
+    int step = get_local_size(0);
+
+    for(int j=init;j<256;j+=step) {
+        for (int i=0; i<8; i++) lT[i][j] = T[i][j];
+    }
+	
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+  gostkernel(hash, lT);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1739,8 +1720,14 @@ __kernel void search14(__global hash_t* hashes)
   uint gid = get_global_id(0);
   uint offset = get_global_offset(0);
   __global hash_t *hash = &(hashes[gid-offset]);
-
-  echokernel(hash);
+  
+  __local uint AES0[256];
+  for(int i = get_local_id(0), step = get_local_size(0); i < 256; i += step)
+    AES0[i] = AES0_C[i];
+	
+  barrier(CLK_LOCAL_MEM_FENCE);
+	
+  echokernel(hash, AES0);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1749,8 +1736,18 @@ __kernel void search15(__global hash_t* hashes)
   uint gid = get_global_id(0);
   uint offset = get_global_offset(0);
   __global hash_t *hash = &(hashes[gid-offset]);
+  
+  __local sph_s32 yoff[256];
 
-  simdkernel(hash);
+  int init = get_local_id(0);
+  int step = get_local_size(0);
+
+  for (int i = init; i < 256; i += step)
+    yoff[i] = yoff_b_n[i];
+
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  simdkernel(hash, yoff);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1769,8 +1766,21 @@ __kernel void search17(__global hash_t* hashes)
   uint gid = get_global_id(0);
   uint offset = get_global_offset(0);
   __global hash_t *hash = &(hashes[gid-offset]);
+  
+   // mixtab
+  __local sph_u32 mixtab0[256], mixtab1[256], mixtab2[256], mixtab3[256];
+  int init = get_local_id(0);
+  int step = get_local_size(0);
+  for (int i = init; i < 256; i += step) {
+    mixtab0[i] = mixtab0_c[i];
+    mixtab1[i] = mixtab1_c[i];
+    mixtab2[i] = mixtab2_c[i];
+    mixtab3[i] = mixtab3_c[i];
+  }
 
-  fuguekernel(hash);
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  fuguekernel(hash, mixtab0, mixtab1, mixtab2, mixtab3);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1778,8 +1788,23 @@ __kernel void search18(__global hash_t* hashes)
 {
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
+  
+  __local uint AES0[256], AES1[256], AES2[256], AES3[256];
+	
+	const int step = get_local_size(0);
+	
+	for(int i = get_local_id(0); i < 256; i += step)
+	{
+		const uint tmp = AES0_C[i];
+		AES0[i] = tmp;
+		AES1[i] = rotate(tmp, 8U);
+		AES2[i] = rotate(tmp, 16U);
+		AES3[i] = rotate(tmp, 24U);
+	}
+	
+	barrier(CLK_LOCAL_MEM_FENCE);
 
-  shavitekernel(hash);
+  shavitekernel(hash, AES0, AES1, AES2, AES3);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1806,7 +1831,22 @@ __kernel void search21(__global hash_t* hashes)
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
-  shavitekernel(hash);
+  __local uint AES0[256], AES1[256], AES2[256], AES3[256];
+	
+	const int step = get_local_size(0);
+	
+	for(int i = get_local_id(0); i < 256; i += step)
+	{
+		const uint tmp = AES0_C[i];
+		AES0[i] = tmp;
+		AES1[i] = rotate(tmp, 8U);
+		AES2[i] = rotate(tmp, 16U);
+		AES3[i] = rotate(tmp, 24U);
+	}
+	
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+    shavitekernel(hash, AES0, AES1, AES2, AES3);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1815,7 +1855,18 @@ __kernel void search22(__global hash_t* hashes)
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
-  gostkernel(hash);
+  __local sph_u64 lT[8][256];
+
+    int init = get_local_id(0);
+    int step = get_local_size(0);
+
+    for(int j=init;j<256;j+=step) {
+        for (int i=0; i<8; i++) lT[i][j] = T[i][j];
+    }
+	
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    gostkernel(hash, lT);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1824,7 +1875,13 @@ __kernel void search23(__global hash_t* hashes)
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
-  echokernel(hash);
+  __local uint AES0[256];
+  for(int i = get_local_id(0), step = get_local_size(0); i < 256; i += step)
+    AES0[i] = AES0_C[i];
+	
+  barrier(CLK_LOCAL_MEM_FENCE);
+	
+  echokernel(hash, AES0);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
@@ -1860,7 +1917,7 @@ __kernel void search27(__global hash_t* hashes, __global uint* output, const ulo
     uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
-__local sph_s32 yoff[256];
+  __local sph_s32 yoff[256];
 
   int init = get_local_id(0);
   int step = get_local_size(0);
