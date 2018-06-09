@@ -1756,7 +1756,9 @@ static cl_int queue_cryptonight_kernel(_clState *clState, dev_blk_ctx *blk, __ma
     char kernel_name[20] = "search1";
     if (variant > 0)
       snprintf(kernel_name + 7, sizeof(kernel_name) - 7, "_var%d", variant);
-    clReleaseKernel(clState->extra_kernels[0]);
+	applog(LOG_ERR, "KERNL NAME  %S", kernel_name);
+
+	clReleaseKernel(clState->extra_kernels[0]);
     clState->extra_kernels[0] = clCreateKernel(clState->program, kernel_name, &status);
     if (status != CL_SUCCESS) {
       applog(LOG_ERR, "Error %d: Creating Kernel \"%s\" from program. (clCreateKernel)", kernel_name, status);
@@ -1778,6 +1780,8 @@ static cl_int queue_cryptonight_kernel(_clState *clState, dev_blk_ctx *blk, __ma
   kernel = clState->extra_kernels;
   CL_SET_ARG(clState->Scratchpads);
   CL_SET_ARG(clState->States);
+  if (variant > 0)
+	  CL_SET_ARG(*(cl_uint*)(clState->cldata + 35));
 
   num = 0;
   CL_NEXTKERNEL_SET_ARG(clState->Scratchpads);

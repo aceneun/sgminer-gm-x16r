@@ -1,3 +1,5 @@
+#define R128_IMPLEMENTATION
+#include "r128.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -13,51 +15,50 @@
 #include "algorithm/cryptonight.h"
 #include "algorithm/cn-aes-tbls.h"
 
+
+
 #define VARIANT1_1(p) \
-  do if (Variant > 0) \
-  { \
-    const uint8_t tmp = ((const uint8_t*)(p))[11]; \
+  do if (Variant > 0) { \
+    const uint32_t tmp = (p); \
     static const uint32_t table = 0x75310; \
-    const uint8_t index = (((tmp >> 3) & 6) | (tmp & 1)) << 1; \
-    ((uint8_t*)(p))[11] = tmp ^ ((table >> index) & 0x30); \
+    const uint8_t index = ((tmp >> 26) & 12) | ((tmp >> 23) & 2); \
+    (p) ^= ((table >> index) & 0x30) << 24; \
   } while(0)
 
 #define VARIANT1_2(p) \
-  do \
-  { \
-    ((uint32_t*)(p))[2] ^= nonce; \
+  do if (Variant > 0) { \
+    (p) ^= tweak1_2; \
   } while(0)
 
 #define VARIANT1_INIT() \
-  if (Variant > 0 && Length < 43) \
-  { \
+  if (Variant > 0 && Length < 43) { \
     quit(1, "Cryptonight variants need at least 43 bytes of data"); \
   } \
-  const uint32_t nonce = Variant > 0 ? *(uint32_t*)(Input + 39) : 0
+  const uint64_t tweak1_2 = Variant > 0 ? *(uint64_t*)(Input + 35) ^ CNCtx->State[24] : 0
 
 
 static const uint64_t keccakf_rndc[24] =
 {
-    0x0000000000000001ULL, 0x0000000000008082ULL, 0x800000000000808aULL,
-    0x8000000080008000ULL, 0x000000000000808bULL, 0x0000000080000001ULL,
-    0x8000000080008081ULL, 0x8000000000008009ULL, 0x000000000000008aULL,
-    0x0000000000000088ULL, 0x0000000080008009ULL, 0x000000008000000aULL,
-    0x000000008000808bULL, 0x800000000000008bULL, 0x8000000000008089ULL,
-    0x8000000000008003ULL, 0x8000000000008002ULL, 0x8000000000000080ULL,
-    0x000000000000800aULL, 0x800000008000000aULL, 0x8000000080008081ULL,
-    0x8000000000008080ULL, 0x0000000080000001ULL, 0x8000000080008008ULL
+	0x0000000000000001ULL, 0x0000000000008082ULL, 0x800000000000808aULL,
+	0x8000000080008000ULL, 0x000000000000808bULL, 0x0000000080000001ULL,
+	0x8000000080008081ULL, 0x8000000000008009ULL, 0x000000000000008aULL,
+	0x0000000000000088ULL, 0x0000000080008009ULL, 0x000000008000000aULL,
+	0x000000008000808bULL, 0x800000000000008bULL, 0x8000000000008089ULL,
+	0x8000000000008003ULL, 0x8000000000008002ULL, 0x8000000000000080ULL,
+	0x000000000000800aULL, 0x800000008000000aULL, 0x8000000080008081ULL,
+	0x8000000000008080ULL, 0x0000000080000001ULL, 0x8000000080008008ULL
 };
 
 static const uint32_t keccakf_rotc[24] =
 {
-    1,  3,  6,  10, 15, 21, 28, 36, 45, 55, 2,  14,
-    27, 41, 56, 8,  25, 43, 62, 18, 39, 61, 20, 44
+	1,  3,  6,  10, 15, 21, 28, 36, 45, 55, 2,  14,
+	27, 41, 56, 8,  25, 43, 62, 18, 39, 61, 20, 44
 };
 
 static const uint32_t keccakf_piln[24] =
 {
-    10, 7,  11, 17, 18, 3, 5,  16, 8,  21, 24, 4,
-    15, 23, 19, 13, 12, 2, 20, 14, 22, 9,  6,  1
+	10, 7,  11, 17, 18, 3, 5,  16, 8,  21, 24, 4,
+	15, 23, 19, 13, 12, 2, 20, 14, 22, 9,  6,  1
 };
 
 #define ROTL64(x, y)		(((x) << (y)) | ((x) >> (64 - (y))))
@@ -68,7 +69,7 @@ static void CNKeccakF1600(uint64_t *st)
 	int i, round;
 	uint64_t t, bc[5];
 
-	for(round = 0; round < 24; ++round)
+	for (round = 0; round < 24; ++round)
 	{
 		bc[0] = st[0] ^ st[5] ^ st[10] ^ st[15] ^ st[20] ^ ROTL64(st[2] ^ st[7] ^ st[12] ^ st[17] ^ st[22], 1UL);
 		bc[1] = st[1] ^ st[6] ^ st[11] ^ st[16] ^ st[21] ^ ROTL64(st[3] ^ st[8] ^ st[13] ^ st[18] ^ st[23], 1UL);
@@ -114,7 +115,7 @@ static void CNKeccakF1600(uint64_t *st)
 			t = bc[0];
 		}
 
-		for(int i = 0; i < 25; i += 5)
+		for (int i = 0; i < 25; i += 5)
 		{
 			uint64_t tmp1 = st[i], tmp2 = st[i + 1];
 
@@ -145,7 +146,7 @@ void CNKeccak(uint64_t *output, uint64_t *input, uint32_t Length)
 
 	memset(((uint8_t *)st) + Length + 1, 0x00, 128 - Length - 1);
 
-	for(int i = 16; i < 25; ++i) st[i] = 0x00UL;
+	for (int i = 16; i < 25; ++i) st[i] = 0x00UL;
 
 	// Last bit of padding
 	st[16] = 0x8000000000000000UL;
@@ -155,24 +156,54 @@ void CNKeccak(uint64_t *output, uint64_t *input, uint32_t Length)
 	memcpy(output, st, 200);
 }
 
+void umul64wide(uint64_t a, uint64_t b, uint64_t *hi, uint64_t *lo)
+{
+	uint64_t a_lo = (uint64_t)(uint32_t)a;
+	uint64_t a_hi = a >> 32;
+	uint64_t b_lo = (uint64_t)(uint32_t)b;
+	uint64_t b_hi = b >> 32;
+
+	uint64_t p0 = a_lo * b_lo;
+	uint64_t p1 = a_lo * b_hi;
+	uint64_t p2 = a_hi * b_lo;
+	uint64_t p3 = a_hi * b_hi;
+
+	uint32_t cy = (uint32_t)(((p0 >> 32) + (uint32_t)p1 + (uint32_t)p2) >> 32);
+
+	*lo = p0 + (p1 << 32) + (p2 << 32);
+	*hi = p3 + (p1 >> 32) + (p2 >> 32) + cy;
+}
+
+
 static inline uint64_t mul128(uint64_t a, uint64_t b, uint64_t* product_hi)
 {
 	uint64_t lo, hi;
 
-	// __asm__("mul %%rdx":
-	// "=a" (lo), "=d" (hi):
-	// "a" (a), "d" (b));
-
+	
+#ifndef WIN32
+	__asm__("mul %%rdx":
+	"=a" (lo), "=d" (hi) :
+		"a" (a), "d" (b));
 	*product_hi = hi;
 
+#else
+	umul64wide(a, b, product_hi, &lo);
+
+#endif
+	
+
+
+	
 	return lo;
 }
 
 #define BYTE(x, y)		(((x) >> ((y) << 3)) & 0xFF)
 #define ROTL32(x, y)	(((x) << (y)) | ((x) >> (32 - (y))))
 
-void CNAESRnd(uint32_t *X, const uint32_t *key)
+void CNAESRnd(void  *XX, const void *keyX)
 {
+	uint32_t *X   = (uint32_t *)XX;
+	uint32_t *key = (uint32_t *)keyX;
 	uint32_t Y[4];
 
 	Y[0] = CNAESTbl[BYTE(X[0], 0)] ^ ROTL32(CNAESTbl[BYTE(X[1], 1)], 8) ^ ROTL32(CNAESTbl[BYTE(X[2], 2)], 16) ^ ROTL32(CNAESTbl[BYTE(X[3], 3)], 24);
@@ -180,14 +211,15 @@ void CNAESRnd(uint32_t *X, const uint32_t *key)
 	Y[2] = CNAESTbl[BYTE(X[2], 0)] ^ ROTL32(CNAESTbl[BYTE(X[3], 1)], 8) ^ ROTL32(CNAESTbl[BYTE(X[0], 2)], 16) ^ ROTL32(CNAESTbl[BYTE(X[1], 3)], 24);
 	Y[3] = CNAESTbl[BYTE(X[3], 0)] ^ ROTL32(CNAESTbl[BYTE(X[0], 1)], 8) ^ ROTL32(CNAESTbl[BYTE(X[1], 2)], 16) ^ ROTL32(CNAESTbl[BYTE(X[2], 3)], 24);
 
-	for(int i = 0; i < 4; ++i) X[i] = Y[i] ^ key[i];
+	for (int i = 0; i < 4; ++i) X[i] = Y[i] ^ key[i];
 }
 
-void CNAESTransform(uint32_t *X, const uint32_t *Key)
+void CNAESTransform(uint64_t *X, const uint32_t *Key)
 {
-	for(int i = 0; i < 10; ++i)
+	
+	for (int i = 0; i < 10; ++i)
 	{
-		CNAESRnd(X, Key + (i << 2));
+		CNAESRnd( (uint32_t *) X, Key + (i << 2));
 	}
 }
 
@@ -195,7 +227,7 @@ void CNAESTransform(uint32_t *X, const uint32_t *Key)
 
 void AESExpandKey256(uint32_t *keybuf)
 {
-	for(uint32_t c = 8, i = 1; c < 60; ++c)
+	for (uint32_t c = 8, i = 1; c < 60; ++c)
 	{
 		// For 256-bit keys, an sbox permutation is done every other 4th uint generated, AND every 8th
 		uint32_t t = ((!(c & 3))) ? SubWord(keybuf[c - 1]) : keybuf[c - 1];
@@ -209,59 +241,60 @@ void AESExpandKey256(uint32_t *keybuf)
 
 void cryptonight(uint8_t *Output, uint8_t *Input, uint32_t Length, int Variant)
 {
-	CryptonightCtx CNCtx;
+	CryptonightCtx *CNCtx = (CryptonightCtx *)malloc(sizeof(CryptonightCtx));
 	uint64_t text[16], a[2], b[2];
 	uint32_t ExpandedKey1[64], ExpandedKey2[64];
 
+	CNKeccak(CNCtx->State, (uint64_t *)Input, Length);
+
 	VARIANT1_INIT();
 
-	CNKeccak(CNCtx.State, (uint64_t *) Input, Length);
-
-	for(int i = 0; i < 4; ++i) ((uint64_t *)ExpandedKey1)[i] = CNCtx.State[i];
-	for(int i = 0; i < 4; ++i) ((uint64_t *)ExpandedKey2)[i] = CNCtx.State[i + 4];
+	for (int i = 0; i < 4; ++i) ((uint64_t *)ExpandedKey1)[i] = CNCtx->State[i];
+	for (int i = 0; i < 4; ++i) ((uint64_t *)ExpandedKey2)[i] = CNCtx->State[i + 4];
 
 	AESExpandKey256(ExpandedKey1);
 	AESExpandKey256(ExpandedKey2);
 
-	memcpy(text, CNCtx.State + 8, 128);
+	memcpy(text, CNCtx->State + 8, 128);
 
-	for(int i = 0; i < 0x4000; ++i)
+	for (int i = 0; i < 0x4000; ++i)
 	{
-		for(int j = 0; j < 8; ++j)
+		for (int j = 0; j < 8; ++j)
 		{
-			CNAESTransform((uint32_t *) text + (j << 1), ExpandedKey1);
+			CNAESTransform(text + (j << 1), ExpandedKey1);
 		}
 
-		memcpy(CNCtx.Scratchpad + (i << 4), text, 128);
+		memcpy(CNCtx->Scratchpad + (i << 4), text, 128);
 	}
 
-	a[0] = CNCtx.State[0] ^ CNCtx.State[4];
-	b[0] = CNCtx.State[2] ^ CNCtx.State[6];
-	a[1] = CNCtx.State[1] ^ CNCtx.State[5];
-	b[1] = CNCtx.State[3] ^ CNCtx.State[7];
+	a[0] = CNCtx->State[0] ^ CNCtx->State[4];
+	b[0] = CNCtx->State[2] ^ CNCtx->State[6];
+	a[1] = CNCtx->State[1] ^ CNCtx->State[5];
+	b[1] = CNCtx->State[3] ^ CNCtx->State[7];
 
-	for(int i = 0; i < 0x80000; ++i)
+	for (int i = 0; i < 0x80000; ++i)
 	{
 		uint64_t c[2];
-		memcpy(c, CNCtx.Scratchpad + ((a[0] & 0x1FFFF0) >> 3), 16);
+		memcpy(c, CNCtx->Scratchpad + ((a[0] & 0x1FFFF0) >> 3), 16);
 
-		CNAESRnd((uint32_t *) c, (uint32_t *) a);
+		CNAESRnd(c, a);
 
 		b[0] ^= c[0];
 		b[1] ^= c[1];
 
-		memcpy(CNCtx.Scratchpad + ((a[0] & 0x1FFFF0) >> 3), b, 16);
-		VARIANT1_1(CNCtx.Scratchpad + ((a[0] & 0x1FFFF0) >> 3));
+		VARIANT1_1(b[1]);
+		memcpy(CNCtx->Scratchpad + ((a[0] & 0x1FFFF0) >> 3), b, 16);
 
-		memcpy(b, CNCtx.Scratchpad + ((c[0] & 0x1FFFF0) >> 3), 16);
+		memcpy(b, CNCtx->Scratchpad + ((c[0] & 0x1FFFF0) >> 3), 16);
 
 		uint64_t hi;
 
 		a[1] += mul128(c[0], b[0], &hi);
 		a[0] += hi;
 
-		memcpy(CNCtx.Scratchpad + ((c[0] & 0x1FFFF0) >> 3), a, 16);
-		VARIANT1_2(CNCtx.Scratchpad + ((c[0] & 0x1FFFF0) >> 3));
+		VARIANT1_2(a[1]);
+		memcpy(CNCtx->Scratchpad + ((c[0] & 0x1FFFF0) >> 3), a, 16);
+		VARIANT1_2(a[1]);
 
 		a[0] ^= b[0];
 		a[1] ^= b[1];
@@ -270,58 +303,60 @@ void cryptonight(uint8_t *Output, uint8_t *Input, uint32_t Length, int Variant)
 		b[1] = c[1];
 	}
 
-	memcpy(text, CNCtx.State + 8, 128);
+	memcpy(text, CNCtx->State + 8, 128);
 
-	for(int i = 0; i < 0x4000; ++i)
+	for (int i = 0; i < 0x4000; ++i)
 	{
-		for(int j = 0; j < 16; ++j) text[j] ^= CNCtx.Scratchpad[(i << 4) + j];
+		for (int j = 0; j < 16; ++j) text[j] ^= CNCtx->Scratchpad[(i << 4) + j];
 
-		for(int j = 0; j < 8; ++j)
+		for (int j = 0; j < 8; ++j)
 		{
-			CNAESTransform((uint32_t *) text + (j << 1), ExpandedKey2);
+			CNAESTransform(text + (j << 1), ExpandedKey2);
 		}
 	}
 
 	// Tail Keccak and arbitrary hash func here
-	memcpy(CNCtx.State + 8, text, 128);
+	memcpy(CNCtx->State + 8, text, 128);
 
-	CNKeccakF1600(((uint64_t *)CNCtx.State));
+	CNKeccakF1600(((uint64_t *)CNCtx->State));
 
-	switch(CNCtx.State[0] & 3)
+	switch (CNCtx->State[0] & 3)
 	{
-		case 0:
-		{
-			sph_blake256_context blakectx;
-			sph_blake256_init(&blakectx);
-			sph_blake256(&blakectx, CNCtx.State, 200);
-			sph_blake256_close(&blakectx, Output);
-			break;
-		}
-		case 1:
-		{
-			sph_groestl256_context groestl256;
-			sph_groestl256_init(&groestl256);
-			sph_groestl256(&groestl256, CNCtx.State, 200);
-			sph_groestl256_close(&groestl256, Output);
-			break;
-		}
-		case 2:
-		{
-			sph_jh256_context jh256;
-			sph_jh256_init(&jh256);
-			sph_jh256(&jh256, CNCtx.State, 200);
-			sph_jh256_close(&jh256, Output);
-			break;
-		}
-		case 3:
-		{
-			sph_skein256_context skein256;
-			sph_skein256_init(&skein256);
-			sph_skein256(&skein256, CNCtx.State, 200);
-			sph_skein256_close(&skein256, Output);
-			break;
-		}
+	case 0:
+	{
+		sph_blake256_context blakectx;
+		sph_blake256_init(&blakectx);
+		sph_blake256(&blakectx, CNCtx->State, 200);
+		sph_blake256_close(&blakectx, Output);
+		break;
 	}
+	case 1:
+	{
+		sph_groestl256_context groestl256;
+		sph_groestl256_init(&groestl256);
+		sph_groestl256(&groestl256, CNCtx->State, 200);
+		sph_groestl256_close(&groestl256, Output);
+		break;
+	}
+	case 2:
+	{
+		sph_jh256_context jh256;
+		sph_jh256_init(&jh256);
+		sph_jh256(&jh256, CNCtx->State, 200);
+		sph_jh256_close(&jh256, Output);
+		break;
+	}
+	case 3:
+	{
+		sph_skein256_context skein256;
+		sph_skein256_init(&skein256);
+		sph_skein256(&skein256, CNCtx->State, 200);
+		sph_skein256_close(&skein256, Output);
+		break;
+	}
+	}
+
+	free(CNCtx);
 }
 
 void cryptonight_regenhash(struct work *work)
@@ -332,9 +367,9 @@ void cryptonight_regenhash(struct work *work)
 
 	memcpy(data, work->data, work->XMRBlobLen);
 
-	cryptonight((uint8_t *)ohash, (uint8_t *) data, work->XMRBlobLen, variant);
+	cryptonight( (uint8_t *) ohash, (uint8_t *)data, work->XMRBlobLen, variant);
 
-	char *tmpdbg = bin2hex((uint8_t*) ohash, 32);
+	char *tmpdbg = bin2hex((uint8_t*)ohash, 32);
 
 	applog(LOG_DEBUG, "cryptonight_regenhash_var%d: %s", variant, tmpdbg);
 
