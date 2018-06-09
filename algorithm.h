@@ -27,6 +27,7 @@ typedef enum {
   ALGO_PHI,
   ALGO_TRIBUS,
   ALGO_AERGO,
+  ALGO_C11,
   ALGO_KECCAK,
   ALGO_QUARK,
   ALGO_TWE,

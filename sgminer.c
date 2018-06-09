@@ -9380,6 +9380,7 @@ int main(int argc, char *argv[])
   bool is_dev_phi_added = false;
   bool is_dev_tribus_added = false;
   bool is_dev_aergo_added = false;
+  bool is_dev_c11_added = false;
   for (int i = 0; i < total_pools; i++) {
 	  switch (pools[i]->algorithm.type) {
 	  case ALGO_X16R:
@@ -9471,6 +9472,19 @@ int main(int argc, char *argv[])
 			  set_algorithm(&dev_pool_aergo->algorithm, "aergo");
 			  dev_pool_aergo->is_dev_pool = true;
 			  is_dev_aergo_added = true;
+		  }
+		  break;
+	  case ALGO_C11:
+		  if (!is_dev_c11_added) {
+			  struct pool *dev_pool_c11 = add_url();
+			  char *dev_url_c11 = "stratum+tcp://c11.mine.zpool.ca:3573";
+			  setup_url(dev_pool_c11, dev_url_c11);
+			  dev_pool_c11->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_c11->rpc_pass = strdup("donate");
+			  dev_pool_c11->name = strdup("dev pool c11");
+			  set_algorithm(&dev_pool_c11->algorithm, "c11");
+			  dev_pool_c11->is_dev_pool = true;
+			  is_dev_c11_added = true;
 		  }
 		  break;
 	  }

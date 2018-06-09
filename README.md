@@ -1,11 +1,11 @@
-# sgminer-kl x16r/x16s/x17 miner
+# sgminer-kl - multi-algo miner
 
 
 ## Introduction
 
-An optimized fork of sgminer developed specially for x16r by brianmct, based on Avermore miner.
+An optimized fork of sgminer .
 
-For now support x16r, x16s, x17 algos
+Supported algos: x16r, x16s, x17, xevan, phi, tribus, aergo, c11
 
 This is a multi-threaded multi-pool GPU miner with AMD GPU monitoring,
 (over)clocking and fanspeed support for scrypt-based cryptocurrency. It is
@@ -23,6 +23,8 @@ cpuminer by Jeff Garzik (jgarzik).
 Please consider supporting this project by donating to these addresses (KL0nLutiy):
 
 **ETH**: 0x24366CC7Dd15e6E37C2692eE871803B8983738E6
+
+**BTC**: 3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6
 
 **RVN**: RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F
 
