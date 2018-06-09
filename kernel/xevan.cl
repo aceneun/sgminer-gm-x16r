@@ -63,8 +63,6 @@ typedef int sph_s32;
 
 #define SPH_C64(x)    ((sph_u64)(x ## UL))
 #define SPH_T64(x) (as_ulong(x))
-#define SPH_ROTL64(x, n) rotate(as_ulong(x), (n) & 0xFFFFFFFFFFFFFFFFUL)
-#define SPH_ROTR64(x, n)   SPH_ROTL64(x, (64 - (n)))
 
 #define SPH_ECHO_64 1
 #define SPH_KECCAK_64 1
@@ -85,10 +83,6 @@ typedef int sph_s32;
   #define SPH_KECCAK_UNROLL 0
 #endif
 #define SPH_HAMSI_EXPAND_BIG 1
-
-#ifndef WORKSIZE
-#define WORKSIZE	64
-#endif
 
 #pragma OPENCL EXTENSION cl_amd_media_ops : enable
 #pragma OPENCL EXTENSION cl_amd_media_ops2 : enable
@@ -140,10 +134,6 @@ ulong ROTL64_2(const uint2 vv, const int r) { return as_ulong((amd_bitalign((vv)
 
 #define ENC64E DEC64E
 #define ENC32E DEC32E
-
-#define SHL(x, n) ((x) << (n))
-#define SHR(x, n) ((x) >> (n))
-
 
 typedef union {
   unsigned char h1[64];
@@ -960,7 +950,7 @@ void simdkernel(__global hash_t *hash,__local sph_s32 *yoff)
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-void echokernel(__global hash_t *hash, __local uint AES0_WOLF[256], const __local uint AES1_WOLF[256], const __local uint AES2_WOLF[256], const __local uint AES3_WOLF[256])
+void echokernel(__global hash_t *hash, __local uint AES0[256], const __local uint AES1[256], const __local uint AES2[256], const __local uint AES3[256])
 {
 	// echo
 	uint4 W[16];
@@ -1004,7 +994,7 @@ void echokernel(__global hash_t *hash, __local uint AES0_WOLF[256], const __loca
 	#pragma unroll 1
 	for(uchar i = 0; i < 10; ++i)
 	{
-		BigSubBytes(AES0_WOLF, AES1_WOLF, AES2_WOLF, AES3_WOLF, W, i, 0);
+		BigSubBytes(AES0, AES1, AES2, AES3, W, i, 0);
 		BigShiftRows(W);
 		BigMixColumns(W);
 	}
@@ -1754,7 +1744,7 @@ __kernel void search10(__global hash_t* hashes)
   uint offset = get_global_offset(0);
   __global hash_t *hash = &(hashes[gid - offset]);
   
-  __local uint AES0256], AES1[256], AES2[256], AES3[256];
+  __local uint AES0[256], AES1[256], AES2[256], AES3[256];
 	const uint step = get_local_size(0);
 	for(int i = get_local_id(0); i < 256; i += step)
 	{
@@ -2165,8 +2155,6 @@ __kernel void search33(__global hash_t* hashes, __global uint* output, const ulo
 
   if (result)
     output[atomic_inc(output+0xFF)] = SWAP4(gid);
-
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 #endif // XEVAN_CL

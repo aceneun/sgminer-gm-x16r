@@ -1457,13 +1457,12 @@ __kernel void search16(__global hash_t* hashes, __global uint* output, const ulo
 
 #define A(x) X_var[x]
   CORE5(A);
+#undef A
 
   bool result = (s7 <= (target >> 32));
 
   if (result)
     output[atomic_inc(output+0xFF)] = SWAP4(gid);
-
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 #endif // X17_CL

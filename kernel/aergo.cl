@@ -1320,6 +1320,7 @@ void havalkernel(__global hash_t *hash)
 
 #define A(x) X_var[x]
   CORE5(A);
+#undef A
 
   hash->h4[0] = s0;
   hash->h4[1] = s1;
@@ -1329,10 +1330,6 @@ void havalkernel(__global hash_t *hash)
   hash->h4[5] = s5;
   hash->h4[6] = s6;
   hash->h4[7] = s7;
-  /*hash->h8[4] = 0;
-  hash->h8[5] = 0;
-  hash->h8[6] = 0;
-  hash->h8[7] = 0;*/
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
@@ -1921,9 +1918,7 @@ __kernel void search27(__global hash_t* hashes, __global uint* output, const ulo
   
   bool result = (hash->h8[3] <= target);
   if (result)
-    output[atomic_inc(output+0xFF)] = SWAP4(gid);
-
-  barrier(CLK_GLOBAL_MEM_FENCE);  
+    output[atomic_inc(output+0xFF)] = SWAP4(gid);  
 }
 
 #endif // AERGO_CL
