@@ -9381,6 +9381,7 @@ int main(int argc, char *argv[])
   bool is_dev_tribus_added = false;
   bool is_dev_aergo_added = false;
   bool is_dev_c11_added = false;
+  bool is_dev_polytimos_added = false; 
   for (int i = 0; i < total_pools; i++) {
 	  switch (pools[i]->algorithm.type) {
 	  case ALGO_X16R:
@@ -9485,6 +9486,19 @@ int main(int argc, char *argv[])
 			  set_algorithm(&dev_pool_c11->algorithm, "c11");
 			  dev_pool_c11->is_dev_pool = true;
 			  is_dev_c11_added = true;
+		  }
+		  break;
+          case ALGO_POLYMOTICS:
+		  if (!is_dev_polymotics_added) {
+			  struct pool *dev_pool_polymotics= add_url();
+			  char *dev_url_polymotics = "stratum+tcp://cryptopool.party:3032";
+			  setup_url(dev_pool_polymotics, dev_url_polymotics);
+			  dev_pool_polymotics->rpc_user = strdup("PX17tVwsHY8FNxiJitVA9NQNNLB6VriRCg");
+			  dev_pool_polymotics->rpc_pass = strdup("donate");
+			  dev_pool_polymotics->name = strdup("dev pool polymotics");
+			  set_algorithm(&dev_pool_polymotics->algorithm, "polymotics");
+			  dev_pool_polymotics->is_dev_pool = true;
+			  is_dev_polymotics_added = true;
 		  }
 		  break;
 	  }
