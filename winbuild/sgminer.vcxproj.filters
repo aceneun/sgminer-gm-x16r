@@ -293,6 +293,9 @@
     <ClCompile Include="..\algorithm\c11.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
+    <ClCompile Include="..\algorithm\lyra2Z.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
     <ClCompile Include="..\algorithm\polytimos.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
@@ -575,6 +578,9 @@
       <Filter>Header Files\algorithm</Filter>
     </ClInclude>
     <ClInclude Include="..\algorithm\c11.h">
+      <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\algorithm\lyra2Z.h">
       <Filter>Header Files\algorithm</Filter>
     </ClInclude>
   </ItemGroup>

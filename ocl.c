@@ -38,6 +38,7 @@
 #include "algorithm/pluck.h"
 #include "algorithm/yescrypt.h"
 #include "algorithm/lyra2rev2.h"
+#include "algorithm/lyra2Z.h"
 #include "algorithm/equihash.h"
 
 /* FIXME: only here for global config vars, replace with configuration.h
@@ -1072,6 +1073,29 @@ out:
       applog(LOG_ERR, "Error %d: clCreateBuffer (padbuffer8), decrease TC or increase LG", status);
       return NULL;
     }
+  }
+
+  if (algorithm->type == ALGO_LYRA2Z) {
+	  size_t GlobalThreads;
+	  //	  readbufsize = 76UL;
+		  
+      set_threads_hashes(1, clState->compute_shaders, &GlobalThreads, 1, &cgpu->intensity, &cgpu->xintensity, &cgpu->rawintensity, &cgpu->algorithm);
+	  clState->buffer1 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, 16 * 8 * GlobalThreads, NULL, &status);
+	  if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d when creating lyra2z state buffer.\n", status);
+		  return NULL;
+		  
+	  }
+	  
+		  
+		  clState->Scratchpads = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, sizeof(cl_ulong)*LYRA2Z_SCRATCHBUF_SIZE * GlobalThreads, NULL, &status);
+	  
+		  if (status != CL_SUCCESS) {
+		  applog(LOG_ERR, "Error %d when creating lyra2z scratchpads buffer.\n", status);
+		  return NULL;
+		  
+	  }
+	  
   }
 
   if (algorithm->type == ALGO_CRYPTONIGHT) {

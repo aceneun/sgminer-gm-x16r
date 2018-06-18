@@ -79,6 +79,7 @@ sgminer_SOURCES += algorithm/xevan.c algorithm/xevan.h
 sgminer_SOURCES += algorithm/tribus.c algorithm/tribus.h
 sgminer_SOURCES += algorithm/aergo.c algorithm/aergo.h
 sgminer_SOURCES += algorithm/c11.c algorithm/c11.h
+sgminer_SOURCES += algorithm/lyra2Z.c algorithm/lyra2Z.h
 sgminer_SOURCES += algorithm/fresh.c algorithm/fresh.h
 sgminer_SOURCES += algorithm/whirlcoin.c algorithm/whirlcoin.h
 sgminer_SOURCES += algorithm/neoscrypt.c algorithm/neoscrypt.h
