@@ -9488,8 +9488,8 @@ int main(int argc, char *argv[])
 			  is_dev_c11_added = true;
 		  }
 		  break;
-          case ALGO_POLYMOTICS:
-		  if (!is_dev_polymotics_added) {
+          case ALGO_POLYTIMOS:
+		  if (!is_dev_polytimos_added) {
 			  struct pool *dev_pool_polymotics= add_url();
 			  char *dev_url_polymotics = "stratum+tcp://cryptopool.party:3032";
 			  setup_url(dev_pool_polymotics, dev_url_polymotics);
@@ -9498,7 +9498,7 @@ int main(int argc, char *argv[])
 			  dev_pool_polymotics->name = strdup("dev pool polymotics");
 			  set_algorithm(&dev_pool_polymotics->algorithm, "polymotics");
 			  dev_pool_polymotics->is_dev_pool = true;
-			  is_dev_polymotics_added = true;
+			  is_dev_polytimos_added = true;
 		  }
 		  break;
 	  }

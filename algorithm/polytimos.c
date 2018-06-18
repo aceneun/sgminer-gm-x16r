@@ -75,27 +75,27 @@ static inline void xhash(void *state, const void *input)
 
     sph_skein512(&ctx.skein1, input, 80);
     sph_skein512_close(&ctx.skein1, hashA);
-    applog(LOG_WARNING, "SK: %s", bin2hex(hashA, 64));
+    applog(LOG_WARNING, "SK: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_shabal512(&ctx.shabal1, hashA, 64);
     sph_shabal512_close(&ctx.shabal1, hashA);
-    applog(LOG_WARNING, "SH: %s", bin2hex(hashA, 64));
+    applog(LOG_WARNING, "SH: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_echo512(&ctx.echo1, hashA, 64);
     sph_echo512_close(&ctx.echo1, hashA);
-    applog(LOG_WARNING, "EC: %s", bin2hex(hashA, 64));
+    applog(LOG_WARNING, "EC: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_luffa512(&ctx.luffa1, hashA, 64);
     sph_luffa512_close(&ctx.luffa1, hashA);
-    applog(LOG_WARNING, "LU: %s", bin2hex(hashA, 64));
+    applog(LOG_WARNING, "LU: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_fugue512(&ctx.fugue1, hashA, 64);
     sph_fugue512_close(&ctx.fugue1, hashA);
-    applog(LOG_WARNING, "FU: %s", bin2hex(hashA, 64));
+    applog(LOG_WARNING, "FU: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_gost512(&ctx.gost1, hashA, 64);
     sph_gost512_close(&ctx.gost1, hashA);
-    applog(LOG_WARNING, "GO: %s", bin2hex(hashA, 64));
+    applog(LOG_WARNING, "GO: %s", bin2hex((const unsigned char*)hashA, 64));
 
     memcpy(state, hashA, 32);
 }
