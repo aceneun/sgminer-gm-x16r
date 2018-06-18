@@ -32,6 +32,8 @@
 #include "driver-opencl.h"
 #include "findnonce.h"
 #include "ocl.h"
+#include "ocl/cl_state.h"
+#include "ocl/flexible_kernel_functions.h"
 #include "adl.h"
 #include "util.h"
 #include "sysfs-gpu-controls.h"
@@ -1261,6 +1263,11 @@ static void get_opencl_statline(char *buf, size_t bufsiz, struct cgpu_info *gpu)
 struct opencl_thread_data {
   cl_int(*queue_kernel_parameters)(_clState *, dev_blk_ctx *, cl_uint);
   cl_int(*enqueue_kernels)(_clState *, size_t*, size_t*, size_t*);
+  // New, more flexible kernel initialization and dispatch. The legacy system is totally dumb, it requires kernels to conform to a
+  // not very clear protocol so they can be dispatched in a loop no questions asked. It even initializes them dumbly, it requires
+  // each algorithm to re-use a set of fields and allocation strategies, when a new one is needed they just add an 'if' and then
+  // another and another and another. It little matters than allocation becomes a huge mess in itself.
+  flexible_algorithm_functions_t flexibility;
   uint32_t *res;
 };
 
@@ -1341,6 +1348,7 @@ static bool opencl_thread_init(struct thr_info *thr)
 
   thrdata->queue_kernel_parameters = gpu->algorithm.queue_kernel;
   thrdata->enqueue_kernels = gpu->algorithm.enqueue_kernels;
+  thrdata->flexibility = gpu->algorithm.flexibility;
   thrdata->res = (uint32_t *)calloc(BUFFERSIZE, 1);
 
   if (!thrdata->res) {
@@ -1573,7 +1581,30 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 		return -1;
   }
   else {
-    status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel, 1, p_global_work_offset,
+	  if (thrdata->flexibility.enqueue_for_real) {
+		  status = thrdata->flexibility.enqueue_for_real(clState, *p_global_work_offset, globalThreads[0], localThreads[0]);
+		  if (unlikely(status != CL_SUCCESS)) return -1;
+	  }
+	  else { // old, inflexible, inside-out dispatch
+		  status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel, 1, p_global_work_offset,
+			  globalThreads, localThreads, 0, NULL, NULL);
+		  if (unlikely(status != CL_SUCCESS)) {
+			  if (work->pool->algorithm.type == ALGO_ETHASH)
+				  cg_runlock(&gpu->eth_dag.lock);
+			  applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+			  return -1;
+		  }
+
+		  for (i = 0; i < clState->n_extra_kernels; i++) {
+			  status = clEnqueueNDRangeKernel(clState->commandQueue, clState->extra_kernels[i], 1, p_global_work_offset,
+				  globalThreads, localThreads, 0, NULL, NULL);
+			  if (unlikely(status != CL_SUCCESS)) {
+				  applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+				  return -1;
+			  }
+		  }
+	  }
+    /*status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel, 1, p_global_work_offset,
       globalThreads, localThreads, 0, NULL, NULL);
 
     if (unlikely(status != CL_SUCCESS)) {
@@ -1590,7 +1621,7 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
         applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
         return -1;
       }
-    }
+    }*/
   }
   
   status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer, CL_FALSE, 0,

@@ -938,7 +938,7 @@ out:
     }
   }
 
-  size_t bufsize;
+  size_t bufsize = 0;
   size_t buf1size;
   size_t buf3size;
   size_t buf2size;
@@ -953,8 +953,12 @@ out:
     default:
       readbufsize = 128;
   }
-
-  if (algorithm->rw_buffer_size < 0) {
+  if (algorithm->flexibility.allocate_resources) {
+   // Buffer initialization delegated to specific kernel implementation.
+   // Nothing really to do here, allocation really takes place below.
+   // I keep the readbufsize for easiness; unification is left as exercise.
+  }
+  else if (algorithm->rw_buffer_size < 0) {
     // calc buffer size for neoscrypt
     if (algorithm->type == ALGO_NEOSCRYPT) {
       /* The scratch/pad-buffer needs 32kBytes memory per thread. */
@@ -1014,10 +1018,30 @@ out:
     applog(LOG_DEBUG, "Buffer sizes: %lu RW, %lu R", (unsigned long)bufsize, (unsigned long)readbufsize);
   }
 
+  // Let's start with the basics. Each algorithm reads a block header and adds a nonce. The output is a list of
+  // 'good enough' nonces. Define those two buffers first.
+  applog(LOG_DEBUG, "Using read buffer sized %lu", (unsigned long)readbufsize);
+  clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, readbufsize, NULL, &status);
+  if (status != CL_SUCCESS) {
+	  applog(LOG_ERR, "Error %d: clCreateBuffer (CLbuffer0)", status);
+	  return NULL;
+  }
+  applog(LOG_DEBUG, "Using output buffer sized %lu", BUFFERSIZE);
+  clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, BUFFERSIZE, NULL, &status);
+  if (status != CL_SUCCESS) {
+	  applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
+	  return NULL;
+  }
+
   clState->padbuffer8 = NULL;
   clState->buffer1 = NULL;
   clState->buffer2 = NULL;
   clState->buffer3 = NULL;
+
+  if (algorithm->flexibility.allocate_resources) { // if defined, explicit alloc overrides the legacy bindings
+	  algorithm->flexibility.allocate_resources(clState, cgpu->thread_concurrency);
+	  return clState;
+  }
 
   if (bufsize > 0) {
     applog(LOG_DEBUG, "Creating read/write buffer sized %lu", (unsigned long)bufsize);

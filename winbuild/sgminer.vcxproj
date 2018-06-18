@@ -411,6 +411,8 @@
     <ClInclude Include="..\ocl.h" />
     <ClInclude Include="..\ocl\binary_kernel.h" />
     <ClInclude Include="..\ocl\build_kernel.h" />
+    <ClInclude Include="..\ocl\cl_state.h" />
+    <ClInclude Include="..\ocl\flexible_kernel_functions.h" />
     <ClInclude Include="..\pool.h" />
     <ClInclude Include="..\algorithm\quarkcoin.h" />
     <ClInclude Include="..\algorithm\qubitcoin.h" />
