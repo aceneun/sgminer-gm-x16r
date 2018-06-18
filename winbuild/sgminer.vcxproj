@@ -265,6 +265,7 @@
     <ClCompile Include="..\algorithm\bitblock.c" />
     <ClCompile Include="..\algorithm\blake256.c" />
     <ClCompile Include="..\algorithm\blakecoin.c" />
+    <ClCompile Include="..\algorithm\polytimos.c" />
     <ClCompile Include="..\algorithm\c11.c" />
     <ClCompile Include="..\algorithm\credits.c" />
     <ClCompile Include="..\algorithm\cryptonight.c" />
@@ -355,6 +356,7 @@
     <ClInclude Include="..\algorithm\bitblock.h" />
     <ClInclude Include="..\algorithm\blake256.h" />
     <ClInclude Include="..\algorithm\blakecoin.h" />
+    <ClCompile Include="..\algorithm\polytimos.c" />
     <ClInclude Include="..\algorithm\c11.h" />
     <ClInclude Include="..\algorithm\cn-aes-tbls.h" />
     <ClInclude Include="..\algorithm\credits.h" />

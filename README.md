@@ -5,7 +5,7 @@
 
 An optimized fork of sgminer .
 
-Supported algos: x16r, x16s, x17, xevan, phi, tribus, aergo, c11
+Supported algos: x16r, x16s, x17, xevan, phi, tribus, aergo, c11, polytimos
 
 This is a multi-threaded multi-pool GPU miner with AMD GPU monitoring,
 (over)clocking and fanspeed support for scrypt-based cryptocurrency. It is

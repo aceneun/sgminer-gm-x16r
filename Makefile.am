@@ -64,6 +64,7 @@ sgminer_SOURCES += algorithm/inkcoin.c algorithm/inkcoin.h
 sgminer_SOURCES += algorithm/animecoin.c algorithm/animecoin.h
 sgminer_SOURCES += algorithm/groestlcoin.c algorithm/groestlcoin.h
 sgminer_SOURCES += algorithm/sifcoin.c algorithm/sifcoin.h
+sgminer_SOURCES += algorithm/polytimos.c algorithm/polytimos.h
 sgminer_SOURCES += algorithm/twecoin.c algorithm/twecoin.h
 sgminer_SOURCES += algorithm/marucoin.c algorithm/marucoin.h
 sgminer_SOURCES += algorithm/maxcoin.c algorithm/maxcoin.h
