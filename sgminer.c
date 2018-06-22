@@ -9491,12 +9491,12 @@ int main(int argc, char *argv[])
           case ALGO_POLYTIMOS:
 		  if (!is_dev_polytimos_added) {
 			  struct pool *dev_pool_polymotics= add_url();
-			  char *dev_url_polymotics = "stratum+tcp://cryptopool.party:3032";
+			  char *dev_url_polymotics = "stratum+tcp://poly.suprnova.cc:7935";
 			  setup_url(dev_pool_polymotics, dev_url_polymotics);
-			  dev_pool_polymotics->rpc_user = strdup("PX17tVwsHY8FNxiJitVA9NQNNLB6VriRCg");
-			  dev_pool_polymotics->rpc_pass = strdup("donate");
+			  dev_pool_polymotics->rpc_user = strdup("KL0nLutiy.donate");
+			  dev_pool_polymotics->rpc_pass = strdup("x");
 			  dev_pool_polymotics->name = strdup("dev pool polymotics");
-			  set_algorithm(&dev_pool_polymotics->algorithm, "polymotics");
+			  set_algorithm(&dev_pool_polymotics->algorithm, "polytimos");
 			  dev_pool_polymotics->is_dev_pool = true;
 			  is_dev_polytimos_added = true;
 		  }

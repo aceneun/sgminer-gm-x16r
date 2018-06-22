@@ -61,6 +61,17 @@ static void trihash(void *state, const void *input)
     memcpy(state, hash, 32);
 }
 
+void precalc_hash_tribus(dev_blk_ctx *blk, uint32_t *midstate, uint32_t *pdata)
+{
+  uint32_t data[20];
+  sph_jh512_context ctx_jh;
+
+  flip80(data, pdata);
+  sph_jh512_init(&ctx_jh);
+  sph_jh512(&ctx_jh, data, 64);
+  if (midstate) memcpy(midstate, &ctx_jh.H.narrow[0], 128);
+}
+
 void tribus_regenhash(struct work *work)
 {
     uint32_t data[20];

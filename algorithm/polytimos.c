@@ -75,27 +75,27 @@ static inline void xhash(void *state, const void *input)
 
     sph_skein512(&ctx.skein1, input, 80);
     sph_skein512_close(&ctx.skein1, hashA);
-    applog(LOG_WARNING, "SK: %s", bin2hex((const unsigned char*)hashA, 64));
+    //applog(LOG_WARNING, "SK: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_shabal512(&ctx.shabal1, hashA, 64);
     sph_shabal512_close(&ctx.shabal1, hashA);
-    applog(LOG_WARNING, "SH: %s", bin2hex((const unsigned char*)hashA, 64));
+    //applog(LOG_WARNING, "SH: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_echo512(&ctx.echo1, hashA, 64);
     sph_echo512_close(&ctx.echo1, hashA);
-    applog(LOG_WARNING, "EC: %s", bin2hex((const unsigned char*)hashA, 64));
+    //applog(LOG_WARNING, "EC: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_luffa512(&ctx.luffa1, hashA, 64);
     sph_luffa512_close(&ctx.luffa1, hashA);
-    applog(LOG_WARNING, "LU: %s", bin2hex((const unsigned char*)hashA, 64));
+    //applog(LOG_WARNING, "LU: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_fugue512(&ctx.fugue1, hashA, 64);
     sph_fugue512_close(&ctx.fugue1, hashA);
-    applog(LOG_WARNING, "FU: %s", bin2hex((const unsigned char*)hashA, 64));
+    //applog(LOG_WARNING, "FU: %s", bin2hex((const unsigned char*)hashA, 64));
 
     sph_gost512(&ctx.gost1, hashA, 64);
     sph_gost512_close(&ctx.gost1, hashA);
-    applog(LOG_WARNING, "GO: %s", bin2hex((const unsigned char*)hashA, 64));
+    //applog(LOG_WARNING, "GO: %s", bin2hex((const unsigned char*)hashA, 64));
 
     memcpy(state, hashA, 32);
 }
@@ -110,4 +110,72 @@ void polytimos_regenhash(struct work *work)
     //data[19] = 0;
     data[19] = htobe32(*nonce);
     xhash(ohash, data);
+}
+
+static const uint32_t diff1targ = 0x0000ffff;
+
+/* Used externally as confirmation of correct OCL code */
+int polytimos_test(unsigned char *pdata, const unsigned char *ptarget, uint32_t nonce)
+{
+	uint32_t tmp_hash7, Htarg = le32toh(((const uint32_t *)ptarget)[7]);
+	uint32_t data[20], ohash[8];
+
+	be32enc_vect(data, (const uint32_t *)pdata, 19);
+	data[19] = htobe32(nonce);
+	xhash(ohash, data);
+	tmp_hash7 = be32toh(ohash[7]);
+
+	applog(LOG_DEBUG, "htarget %08lx diff1 %08lx hash %08lx",
+		(long unsigned int)Htarg,
+		(long unsigned int)diff1targ,
+		(long unsigned int)tmp_hash7);
+
+	if (tmp_hash7 > diff1targ)
+		return -1;
+
+	if (tmp_hash7 > Htarg)
+		return 0;
+
+	return 1;
+}
+
+bool scanhash_polytimos(struct thr_info *thr, const unsigned char __maybe_unused *pmidstate,
+	unsigned char *pdata, unsigned char __maybe_unused *phash1,
+	unsigned char __maybe_unused *phash, const unsigned char *ptarget,
+	uint32_t max_nonce, uint32_t *last_nonce, uint32_t n)
+{
+	uint32_t *nonce = (uint32_t *)(pdata + 76);
+	uint32_t data[20];
+	uint32_t tmp_hash7;
+	uint32_t Htarg = le32toh(((const uint32_t *)ptarget)[7]);
+	bool ret = false;
+
+	be32enc_vect(data, (const uint32_t *)pdata, 19);
+
+	while (1)
+	{
+		uint32_t ostate[8];
+		*nonce = ++n;
+		data[19] = (n);
+		xhash(ostate, data);
+		tmp_hash7 = (ostate[7]);
+
+		applog(LOG_INFO, "data7 %08lx", (long unsigned int)data[7]);
+
+		if (unlikely(tmp_hash7 <= Htarg))
+		{
+			((uint32_t *)pdata)[19] = htobe32(n);
+			*last_nonce = n;
+			ret = true;
+			break;
+		}
+
+		if (unlikely((n >= max_nonce) || thr->work_restart))
+		{
+			*last_nonce = n;
+			break;
+		}
+	}
+
+	return ret;
 }

@@ -67,6 +67,7 @@ typedef int sph_s32;
 #include "wolf-skein.cl"
 #include "wolf-shabal.cl"
 #include "wolf-echo.cl"
+#include "wolf-aes.cl"
 #include "luffa.cl"
 #include "fugue.cl"
 #include "streebog.cl"
