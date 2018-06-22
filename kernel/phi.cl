@@ -58,7 +58,7 @@ typedef int sph_s32;
 
 #define SPH_ECHO_64 1
 #define SPH_JH_64 1
-#define SPH_CUBEHASH_UNROLL 0
+#define CUBEHASH_FORCED_UNROLL 4
 
 #pragma OPENCL EXTENSION cl_amd_media_ops : enable
 #pragma OPENCL EXTENSION cl_amd_media_ops2 : enable

@@ -71,7 +71,7 @@ typedef int sph_s32;
 #define SPH_KECCAK_NOCOPY 0
 #define SPH_SMALL_FOOTPRINT_GROESTL 0
 #define SPH_GROESTL_BIG_ENDIAN 0
-#define SPH_CUBEHASH_UNROLL 2
+#define CUBEHASH_FORCED_UNROLL 4
 
 #ifndef SPH_COMPACT_BLAKE_64
   #define SPH_COMPACT_BLAKE_64 0
@@ -107,7 +107,7 @@ ulong ROTL64_2(const uint2 vv, const int r) { return as_ulong((amd_bitalign((vv)
 #include "keccak.cl"
 #include "wolf-skein.cl"
 #include "wolf-luffa.cl"
-#include "cubehash.cl"
+#include "wolf-cubehash.cl"
 #include "wolf-shavite.cl"
 #include "simd.cl"
 #include "wolf-echo.cl"
@@ -649,61 +649,39 @@ __kernel void search7(__global hash_t* hashes)
   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
-  sph_u32 x0 = SPH_C32(0x2AEA2A61), x1 = SPH_C32(0x50F494D4), x2 = SPH_C32(0x2D538B8B), x3 = SPH_C32(0x4167D83E);
-  sph_u32 x4 = SPH_C32(0x3FEE2313), x5 = SPH_C32(0xC701CF8C), x6 = SPH_C32(0xCC39968E), x7 = SPH_C32(0x50AC5695);
-  sph_u32 x8 = SPH_C32(0x4D42C787), x9 = SPH_C32(0xA647A8B3), xa = SPH_C32(0x97CF0BEF), xb = SPH_C32(0x825B4537);
-  sph_u32 xc = SPH_C32(0xEEF864D2), xd = SPH_C32(0xF22090C4), xe = SPH_C32(0xD0E5CD33), xf = SPH_C32(0xA23911AE);
-  sph_u32 xg = SPH_C32(0xFCD398D9), xh = SPH_C32(0x148FE485), xi = SPH_C32(0x1B017BEF), xj = SPH_C32(0xB6444532);
-  sph_u32 xk = SPH_C32(0x6A536159), xl = SPH_C32(0x2FF5781C), xm = SPH_C32(0x91FA7934), xn = SPH_C32(0x0DBADEA9);
-  sph_u32 xo = SPH_C32(0xD65C8A2B), xp = SPH_C32(0xA5A70E75), xq = SPH_C32(0xB1C62456), xr = SPH_C32(0xBC796576);
-  sph_u32 xs = SPH_C32(0x1921C8F7), xt = SPH_C32(0xE7989AF1), xu = SPH_C32(0x7795D246), xv = SPH_C32(0xD43E3B44);
+  // cubehash.h1
 
-  x0 ^= hash->h4[0];
-  x1 ^= hash->h4[1];
-  x2 ^= hash->h4[2];
-  x3 ^= hash->h4[3];
-  x4 ^= hash->h4[4];
-  x5 ^= hash->h4[5];
-  x6 ^= hash->h4[6];
-  x7 ^= hash->h4[7];
+  uint state[32] = {   0x2AEA2A61U, 0x50F494D4U, 0x2D538B8BU, 0x4167D83EU, 0x3FEE2313U, 0xC701CF8CU,
+            0xCC39968EU, 0x50AC5695U, 0x4D42C787U, 0xA647A8B3U, 0x97CF0BEFU, 0x825B4537U,
+            0xEEF864D2U, 0xF22090C4U, 0xD0E5CD33U, 0xA23911AEU, 0xFCD398D9U, 0x148FE485U,
+            0x1B017BEFU, 0xB6444532U, 0x6A536159U, 0x2FF5781CU, 0x91FA7934U, 0x0DBADEA9U,
+            0xD65C8A2BU, 0xA5A70E75U, 0xB1C62456U, 0xBC796576U, 0x1921C8F7U, 0xE7989AF1U, 
+            0x7795D246U, 0xD43E3B44U };
 
-  for (int i = 0; i < 13; i ++) {
-    SIXTEEN_ROUNDS;
+  ((ulong4 *)state)[0] ^= vload4(0, hash->h8);
+  ulong4 xor = vload4(1, hash->h8);
 
-    if (i == 0) {
-      x0 ^= hash->h4[8];
-      x1 ^= hash->h4[9];
-      x2 ^= hash->h4[10];
-      x3 ^= hash->h4[11];
-      x4 ^= hash->h4[12];
-      x5 ^= hash->h4[13];
-      x6 ^= hash->h4[14];
-      x7 ^= hash->h4[15];
+  #pragma unroll 2
+  for(int i = 0; i < 14; ++i)
+  {
+    #pragma unroll 4
+    for(int x = 0; x < 8; ++x)
+    {
+      CubeHashEvenRound(state);
+      CubeHashOddRound(state);
     }
-    else if(i == 1)
-      x0 ^= 0x80;
-    else if (i == 2)
-      xv ^= SPH_C32(1);
+
+    if(i == 12)
+    {
+      vstore8(((ulong8 *)state)[0], 0, hash->h8);
+      break;
+    }
+    if(!i) ((ulong4 *)state)[0] ^= xor;
+    state[0] ^= (i == 1) ? 0x80 : 0;
+    state[31] ^= (i == 2) ? 1 : 0;
   }
 
-  hash->h4[0] = x0;
-  hash->h4[1] = x1;
-  hash->h4[2] = x2;
-  hash->h4[3] = x3;
-  hash->h4[4] = x4;
-  hash->h4[5] = x5;
-  hash->h4[6] = x6;
-  hash->h4[7] = x7;
-  hash->h4[8] = x8;
-  hash->h4[9] = x9;
-  hash->h4[10] = xa;
-  hash->h4[11] = xb;
-  hash->h4[12] = xc;
-  hash->h4[13] = xd;
-  hash->h4[14] = xe;
-  hash->h4[15] = xf;
-
-  barrier(CLK_GLOBAL_MEM_FENCE);
+  mem_fence(CLK_GLOBAL_MEM_FENCE);
 }
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))

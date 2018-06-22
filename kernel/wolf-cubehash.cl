@@ -6,65 +6,47 @@
 #define CUBEHASH_FORCED_UNROLL
 #define CUBEHASH_UNROLL_VALUE 
 
+#define ROTL32_x2(r,v,bits) \
+{ \
+    r.x = amd_bitalign(v.x, v.x, (uint)(32 - bits)); \
+    r.y = amd_bitalign(v.y, v.y, (uint)(32 - bits)); \
+}
+
 void CubeHashEvenRound(uint *x)
 {
 	((uint16 *)x)[1] += ((uint16 *)x)[0];
-	((uint16 *)x)[0] = rotate(((uint16 *)x)[0], 7U);
 	
-	/*#pragma unroll
-	for(int i = 0; i < 16; ++i)
-	{
-		x[i + 16] += x[i];
-		x[i] = rotate(x[i], 7U);
-	}*/
-	
-	/*#pragma unroll
-	for(int i = 0; i < 16; ++i)
-	{
-		const uchar y = (i < 8) ? 24 : 8;
-		x[i] ^= x[i + y];
-	}*/
-	
-	//#pragma unroll
-	//for(int i = 0; i < 8; ++i) x[i] ^= x[i + 24];
+	ROTL32_x2(((uint2 *)x)[0],((uint2 *)x)[0],7);
+	ROTL32_x2(((uint2 *)x)[1],((uint2 *)x)[1],7);
+	ROTL32_x2(((uint2 *)x)[2],((uint2 *)x)[2],7);
+	ROTL32_x2(((uint2 *)x)[3],((uint2 *)x)[3],7);
+	ROTL32_x2(((uint2 *)x)[4],((uint2 *)x)[4],7);
+	ROTL32_x2(((uint2 *)x)[5],((uint2 *)x)[5],7);
+	ROTL32_x2(((uint2 *)x)[6],((uint2 *)x)[6],7);
+	ROTL32_x2(((uint2 *)x)[7],((uint2 *)x)[7],7);
 	
 	((uint8 *)x)[0] ^= ((uint8 *)x)[3];
 	((uint8 *)x)[1] ^= ((uint8 *)x)[2];
 	
-	//#pragma unroll
-	//for(int i = 8; i < 16; ++i) x[i] ^= x[i + 8];
+	/*((uint2 *)x)[13] += ((uint2 *)x)[0];
+	ROTL32_x2(((uint2 *)x)[0],((uint2 *)x)[0], 11);
+	((uint2 *)x)[12] += ((uint2 *)x)[1];
+	ROTL32_x2(((uint2 *)x)[1],((uint2 *)x)[1], 11);
 	
-	/*//#pragma unroll
-	for(int i = 0; i < 8; ++i)
-	{
-		x[i + 26] += x[i];
-		x[i] = rotate(x[i], 11U);
-		++i;
-		x[i + 26] += x[i];
-		x[i] = rotate(x[i], 11U);
-		++i;
-		x[i + 22] += x[i];
-		x[i] = rotate(x[i], 11U);
-		++i;
-		x[i + 22] += x[i];
-		x[i] = rotate(x[i], 11U);
-	}
-		
-	//#pragma unroll
-	for(int i = 8; i < 15; ++i)
-	{
-		x[i + 10] += x[i];
-		x[i] = rotate(x[i], 11U);
-		++i;
-		x[i + 10] += x[i];
-		x[i] = rotate(x[i], 11U);
-		++i;
-		x[i + 6] += x[i];
-		x[i] = rotate(x[i], 11U);
-		++i;
-		x[i + 6] += x[i];
-		x[i] = rotate(x[i], 11U);
-	}*/
+	((uint2 *)x)[15] += ((uint2 *)x)[2];
+	ROTL32_x2(((uint2 *)x)[2],((uint2 *)x)[2], 11);
+	((uint2 *)x)[14] += ((uint2 *)x)[3];
+	ROTL32_x2(((uint2 *)x)[3],((uint2 *)x)[3], 11);
+	
+	((uint2 *)x)[9] += ((uint2 *)x)[4];
+	ROTL32_x2(((uint2 *)x)[4],((uint2 *)x)[4], 11);
+	((uint2 *)x)[8] += ((uint2 *)x)[5];
+	ROTL32_x2(((uint2 *)x)[5],((uint2 *)x)[5], 11);
+	
+	((uint2 *)x)[11] += ((uint2 *)x)[6];
+	ROTL32_x2(((uint2 *)x)[6],((uint2 *)x)[6], 11);
+	((uint2 *)x)[10] += ((uint2 *)x)[7];
+	ROTL32_x2(((uint2 *)x)[7],((uint2 *)x)[7], 11);*/
 	
 	#ifdef CUBEHASH_FORCED_UNROLL
 	#pragma unroll CUBEHASH_UNROLL_VALUE
@@ -84,13 +66,6 @@ void CubeHashEvenRound(uint *x)
 		x[i + 22 - y] += x[i];
 		x[i] = rotate(x[i], 11U);
 	}
-	//#pragma unroll
-	/*for(int i = 0; i < 16; ++i)
-	{
-		x[i] ^= x[30 - i];
-		++i;
-		x[i] ^= x[32 - i];
-	}*/
 	
 	#ifdef CUBEHASH_FORCED_UNROLL
 	#pragma unroll CUBEHASH_UNROLL_VALUE
@@ -99,27 +74,42 @@ void CubeHashEvenRound(uint *x)
 }
 
 void CubeHashOddRound(uint *x)
-{
-	//#pragma unroll
-	//for(int i = 0; i < 16; ++i)
-	//{
-	//	x[31 - i] += x[i];
-	//	x[i] = rotate(x[i], 7U);
-	//}
-	
+{	
 	((uint16 *)x)[1].sfedcba9876543210 += ((uint16 *)x)[0];
-	((uint16 *)x)[0] = rotate(((uint16 *)x)[0], 7U);
 	
-	/*#pragma unroll
-	for(int i = 0; i < 8; ++i) x[i] ^= x[23 - i];
-	
-	//#pragma unroll
-	for(int i = 8; i < 16; ++i) x[i] ^= x[39 - i];*/
+	ROTL32_x2(((uint2 *)x)[0],((uint2 *)x)[0],7);
+	ROTL32_x2(((uint2 *)x)[1],((uint2 *)x)[1],7);
+	ROTL32_x2(((uint2 *)x)[2],((uint2 *)x)[2],7);
+	ROTL32_x2(((uint2 *)x)[3],((uint2 *)x)[3],7);
+	ROTL32_x2(((uint2 *)x)[4],((uint2 *)x)[4],7);
+	ROTL32_x2(((uint2 *)x)[5],((uint2 *)x)[5],7);
+	ROTL32_x2(((uint2 *)x)[6],((uint2 *)x)[6],7);
+	ROTL32_x2(((uint2 *)x)[7],((uint2 *)x)[7],7);
 	
 	#ifdef CUBEHASH_FORCED_UNROLL
 	#pragma unroll CUBEHASH_UNROLL_VALUE
 	#endif
 	for(int i = 0; i < 16; ++i) x[i] ^= (i < 8) ? x[23 - i] : x[39 - i];
+	
+	/*((uint2 *)x)[10] += ((uint2 *)x)[0].yx;
+	ROTL32_x2(((uint2 *)x)[0],((uint2 *)x)[0], 11);
+	((uint2 *)x)[11] += ((uint2 *)x)[1].yx;
+	ROTL32_x2(((uint2 *)x)[1],((uint2 *)x)[1], 11);
+	
+	((uint2 *)x)[8] += ((uint2 *)x)[2].yx;
+	ROTL32_x2(((uint2 *)x)[2],((uint2 *)x)[2], 11);
+	((uint2 *)x)[9] += ((uint2 *)x)[3].yx;
+	ROTL32_x2(((uint2 *)x)[3],((uint2 *)x)[3], 11);
+	
+	((uint2 *)x)[14] += ((uint2 *)x)[4].yx;
+	ROTL32_x2(((uint2 *)x)[4],((uint2 *)x)[4], 11);
+	((uint2 *)x)[15] += ((uint2 *)x)[5].yx;
+	ROTL32_x2(((uint2 *)x)[5],((uint2 *)x)[5], 11);
+	
+	((uint2 *)x)[12] += ((uint2 *)x)[6].yx;
+	ROTL32_x2(((uint2 *)x)[6],((uint2 *)x)[6], 11);
+	((uint2 *)x)[13] += ((uint2 *)x)[7].yx;
+	ROTL32_x2(((uint2 *)x)[7],((uint2 *)x)[7], 11);*/
 	
 	#ifdef CUBEHASH_FORCED_UNROLL
 	#pragma unroll CUBEHASH_UNROLL_VALUE
@@ -139,26 +129,6 @@ void CubeHashOddRound(uint *x)
 		x[25 - i + y] += x[i];
 		x[i] = rotate(x[i], 11U);
 	}
-	
-	//#pragma unroll
-	/*for(int i = 16; i < 32; ++i)
-	{
-		x[i - 15] ^= x[i];
-		++i;
-		x[i - 17] ^= x[i];
-	}*/
-	
-	// i = 16 - 1, i = 17 - 0, i = 18 - 3, i = 19 - 2
-	// i = 0  - 1, i = 1  - 0, i = 2  - 3, i = 3  - 3
-	/*for(int i = 0; i < 16; ++i)
-	{
-		x[i + 1] ^= x[i + 16];
-		++i;
-		x[i - 1] ^= x[i + 16];
-	}*/
-	
-	//for(int i = 0; i < 16; i += 2) x[i + 1] ^= x[i + 16];
-	//for(int i = 1; i < 16; i += 2) x[i - 1] ^= x[i + 16];
 	
 	#ifdef CUBEHASH_FORCED_UNROLL
 	#pragma unroll CUBEHASH_UNROLL_VALUE
