@@ -18,7 +18,7 @@
 
 typedef intptr_t ssize_t;
 
-#define snprintf _snprintf
+//#define snprintf _snprintf
 #define strdup _strdup
 #define execv _execv
 #define access _access

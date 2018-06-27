@@ -2,15 +2,7 @@ Tools needed
 ------------
 1. Windows 10
 2. Visual Studio C++ 2017
-3. Windows 7.1 SDK - http://www.microsoft.com/en-us/download/details.aspx?id=8279
-
-If you intend to build for native x64, then instead of using <Visual Studio Command Prompt>, you will need to use
-Windows SDK 7.1 Command Prompt and run "setenv /x64 /Release" before starting to build anything.
-
-Also, for x64, after you follow all the steps and you are ready to build. Go to "Project Properties -> VC++ Directories -> Library Directories" 
-and add this folder to the library list: C:\Program Files\Microsoft SDKs\Windows\v7.1\Lib\x64
-
-To run sgminer built using Visual Studios you will need to have Microsoft Visual C++ 2013 Redistributable Package (x86 or x64 depending on your sgminer version) installed. 
+3. Windows 10 SDK 
 
 Installing dependencies
 -----------------------

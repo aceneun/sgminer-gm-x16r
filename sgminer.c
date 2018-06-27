@@ -17,6 +17,9 @@
 #include <curses.h>
 #endif
 
+FILE _iob[] = { *stdin, *stdout, *stderr };
+extern "C" FILE * __cdecl __iob_func(void) { return _iob; }
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5460,7 +5463,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
     double thread_rolling = 0.0;
     int i;
 
-    applog(LOG_DEBUG, "[thread %d: %"PRIu64" hashes, %.5g khash/sec]",
+    applog(LOG_DEBUG, "[thread %d: %" PRIu64" hashes, %.5g khash/sec]",
       thr_id, hashes_done, hashes_done / 1000. / secs);
 
     /* Rolling average for each thread and each device */
@@ -6725,7 +6728,7 @@ static void gen_stratum_work_equihash(struct pool *pool, struct work *work)
 
     header = bin2hex(work->equihash_data, 143);
     applog(LOG_DEBUG, "[THR%d] Generated stratum header %s", work->thr_id, header);
-    applog(LOG_DEBUG, "[THR%d] job_id %s, nonce1 %s, nonce2 %"PRIu64", ntime %s", work->thr_id, work->job_id, work->nonce1, work->nonce2, work->ntime);
+    applog(LOG_DEBUG, "[THR%d] job_id %s, nonce1 %s, nonce2 %" PRIu64", ntime %s", work->thr_id, work->job_id, work->nonce1, work->nonce2, work->ntime);
     free(header);
   }
 
@@ -6838,7 +6841,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
     merkle_hash = bin2hex((const unsigned char *)merkle_root, 32);
     applog(LOG_DEBUG, "[THR%d] Generated stratum merkle %s", work->thr_id, merkle_hash);
     applog(LOG_DEBUG, "[THR%d] Generated stratum header %s", work->thr_id, header);
-    applog(LOG_DEBUG, "[THR%d] Work job_id %s nonce2 %"PRIu64" ntime %s", work->thr_id, work->job_id,
+    applog(LOG_DEBUG, "[THR%d] Work job_id %s nonce2 %" PRIu64" ntime %s", work->thr_id, work->job_id,
            work->nonce2, work->ntime);
     free(header);
     free(merkle_hash);

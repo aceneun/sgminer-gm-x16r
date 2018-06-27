@@ -2230,7 +2230,7 @@ static bool send_version(struct pool *pool, json_t *val)
   if (!id)
     return false;
 
-  sprintf(s, "{\"id\": %d, \"result\": \""PACKAGE"/"CGMINER_VERSION"\", \"error\": null}", id);
+  sprintf(s, "{\"id\": %d, \"result\": ""truc\", \"error\": null}", id);
   if (!stratum_send(pool, s, strlen(s)))
     return false;
 
@@ -2991,14 +2991,14 @@ resend:
     sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": []}", swork_id++);
   } else {
     if (pool->sessionid) {
-      sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": [\""PACKAGE"/"CGMINER_VERSION"\", \"%s\"]}", swork_id++, pool->sessionid);
+      sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": [\"" PACKAGE "/" CGMINER_VERSION "\", \"%s\"]}", swork_id++, pool->sessionid);
     }
     else {
       if (pool->algorithm.type == ALGO_EQUIHASH) {
-        sprintf(s, "{\"id\":%d, \"method\":\"mining.subscribe\", \"params\":[\""PACKAGE"/"CGMINER_VERSION"\", null, \"%s\", \"%s\"]}", swork_id++, pool->sockaddr_url, pool->stratum_port);
+        sprintf(s, "{\"id\":%d, \"method\":\"mining.subscribe\", \"params\":[\"" PACKAGE "/" CGMINER_VERSION "\", null, \"%s\", \"%s\"]}", swork_id++, pool->sockaddr_url, pool->stratum_port);
       }
       else {
-        sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": [\""PACKAGE"/"CGMINER_VERSION"\"]}", swork_id++);
+        sprintf(s, "{\"id\": %d, \"method\": \"mining.subscribe\", \"params\": [\"" PACKAGE "/" CGMINER_VERSION "\"]}", swork_id++);
       }
     }
   }

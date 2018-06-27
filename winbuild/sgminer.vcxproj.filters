@@ -284,9 +284,6 @@
     <ClCompile Include="..\sph\gost.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
-	<ClCompile Include="..\sph\gost_streebog.c">
-      <Filter>Source Files\sph</Filter>
-    </ClCompile>
     <ClCompile Include="..\algorithm\tribus.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
@@ -301,6 +298,9 @@
     </ClCompile>
     <ClCompile Include="..\algorithm\polytimos.c">
       <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sph\gost_streebog.c">
+      <Filter>Source Files\sph</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -568,9 +568,6 @@
     <ClInclude Include="..\sph\sph_gost.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
-	<ClInclude Include="..\sph\gost_streebog.h">
-      <Filter>Header Files\sph</Filter>
-    </ClInclude>
     <ClInclude Include="..\algorithm\tribus.h">
       <Filter>Header Files\algorithm</Filter>
     </ClInclude>
@@ -594,6 +591,9 @@
     </ClInclude>
     <ClInclude Include="..\ocl\flexible_kernel_functions.h">
       <Filter>Header Files\ocl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sph\gost_streebog.h">
+      <Filter>Header Files\sph</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

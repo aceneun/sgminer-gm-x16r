@@ -22,6 +22,7 @@
     <ProjectGuid>{CCA64DCD-6401-42A3-ABC3-89E48A36D239}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>sgminer</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -41,7 +42,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -186,6 +187,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalOptions>-DHAVE_STRUCT_TIMESPEC %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -196,6 +198,7 @@
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
       <LinkTimeCodeGeneration>
       </LinkTimeCodeGeneration>
+      <AdditionalDependencies>legacy_stdio_definitions.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -329,6 +332,7 @@
     <ClCompile Include="..\sph\echo.c" />
     <ClCompile Include="..\sph\fugue.c" />
     <ClCompile Include="..\sph\gost.c" />
+    <ClCompile Include="..\sph\gost_streebog.c" />
     <ClCompile Include="..\sph\groestl.c" />
     <ClCompile Include="..\sph\hamsi.c" />
     <ClCompile Include="..\sph\hamsi_helper.c" />
@@ -418,6 +422,7 @@
     <ClInclude Include="..\algorithm\qubitcoin.h" />
     <ClInclude Include="..\algorithm\scrypt.h" />
     <ClInclude Include="..\algorithm\sifcoin.h" />
+    <ClInclude Include="..\sph\gost_streebog.h" />
     <ClInclude Include="..\sph\sha256_Y.h" />
     <ClInclude Include="..\sph\sph_blake.h" />
     <ClInclude Include="..\sph\sph_bmw.h" />
