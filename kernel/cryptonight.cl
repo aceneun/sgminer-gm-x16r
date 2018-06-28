@@ -233,7 +233,7 @@ __attribute__((reqd_work_group_size(WORKSIZE, 8, 1)))
 __kernel void search(__global ulong *input, uint InputLen, __global uint4 *Scratchpad, __global ulong *states)
 {
 	ulong State[25];
-	uint ExpandedKey1[256];
+	uint ExpandedKey1[64];
 	__local uint AES0[256], AES1[256], AES2[256], AES3[256];
 	uint4 text;
 	
@@ -364,7 +364,7 @@ __attribute__((reqd_work_group_size(WORKSIZE, 8, 1)))
 __kernel void search2(__global uint4 *Scratchpad, __global ulong *states, __global uint *Branch0, __global uint *Branch1, __global uint *Branch2, __global uint *Branch3)
 {
 	__local uint AES0[256], AES1[256], AES2[256], AES3[256];
-	uint ExpandedKey2[256];
+	uint ExpandedKey2[64];
 	ulong State[25];
 	uint4 text;
 	
@@ -452,7 +452,7 @@ __kernel void search6(__global ulong *states, __global uint *BranchBuf, __global
 	states += 25 * BranchBuf[idx];
 	
 	// skein
-	ulong8 h = vload8(0, SKEIN512_256_IV);
+	ulong8 h = vload8(0, SKEIN256_IV);
 	
 	// Type field begins with final bit, first bit, then six bits of type; the last 96
 	// bits are input processed (including in the block to be processed with that tweak)

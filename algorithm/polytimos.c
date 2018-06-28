@@ -39,7 +39,7 @@
 #include "sph/sph_echo.h"
 #include "sph/sph_shabal.h"
 #include <sph/sph_fugue.h>
-#include <sph/gost_streebog.h>
+#include <sph/sph_gost.h>
 
 /* Move init out of loop, so init once externally, and then use one single memcpy with that bigger memory block */
 typedef struct {

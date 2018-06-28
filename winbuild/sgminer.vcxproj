@@ -332,7 +332,6 @@
     <ClCompile Include="..\sph\echo.c" />
     <ClCompile Include="..\sph\fugue.c" />
     <ClCompile Include="..\sph\gost.c" />
-    <ClCompile Include="..\sph\gost_streebog.c" />
     <ClCompile Include="..\sph\groestl.c" />
     <ClCompile Include="..\sph\hamsi.c" />
     <ClCompile Include="..\sph\hamsi_helper.c" />
@@ -422,7 +421,6 @@
     <ClInclude Include="..\algorithm\qubitcoin.h" />
     <ClInclude Include="..\algorithm\scrypt.h" />
     <ClInclude Include="..\algorithm\sifcoin.h" />
-    <ClInclude Include="..\sph\gost_streebog.h" />
     <ClInclude Include="..\sph\sha256_Y.h" />
     <ClInclude Include="..\sph\sph_blake.h" />
     <ClInclude Include="..\sph\sph_bmw.h" />

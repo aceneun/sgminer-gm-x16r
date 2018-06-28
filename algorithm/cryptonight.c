@@ -1,5 +1,4 @@
-#define R128_IMPLEMENTATION
-#include "r128.h"
+
 
 #include <stddef.h>
 #include <string.h>
@@ -369,11 +368,4 @@ void cryptonight_regenhash(struct work *work)
 
 	cryptonight( (uint8_t *) ohash, (uint8_t *)data, work->XMRBlobLen, variant);
 
-	char *tmpdbg = bin2hex((uint8_t*)ohash, 32);
-
-	applog(LOG_DEBUG, "cryptonight_regenhash_var%d: %s", variant, tmpdbg);
-
-	free(tmpdbg);
-
-	//memset(ohash, 0x00, 32);
 }

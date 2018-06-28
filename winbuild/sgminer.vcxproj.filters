@@ -299,9 +299,6 @@
     <ClCompile Include="..\algorithm\polytimos.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
-    <ClCompile Include="..\sph\gost_streebog.c">
-      <Filter>Source Files\sph</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\adl.h">
@@ -591,9 +588,6 @@
     </ClInclude>
     <ClInclude Include="..\ocl\flexible_kernel_functions.h">
       <Filter>Header Files\ocl</Filter>
-    </ClInclude>
-    <ClInclude Include="..\sph\gost_streebog.h">
-      <Filter>Header Files\sph</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

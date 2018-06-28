@@ -1756,7 +1756,6 @@ static cl_int queue_cryptonight_kernel(_clState *clState, dev_blk_ctx *blk, __ma
     char kernel_name[20] = "search1";
     if (variant > 0)
       snprintf(kernel_name + 7, sizeof(kernel_name) - 7, "_var%d", variant);
-	applog(LOG_ERR, "KERNL NAME  %S", kernel_name);
 
 	clReleaseKernel(clState->extra_kernels[0]);
     clState->extra_kernels[0] = clCreateKernel(clState->program, kernel_name, &status);
@@ -1945,7 +1944,7 @@ static algorithm_settings_t algos[] = {
   { "bitblock", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 14, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, NULL, queue_bitblock_kernel, gen_hash, append_x13_compiler_options },
   { "bitblockold", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, NULL, queue_bitblockold_kernel, gen_hash, append_x13_compiler_options },
 
-{ "polytimos", ALGO_POLYTIMOS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, polytimos_regenhash, NULL, NULL, queue_polytimos_kernel, gen_hash, append_x11_compiler_options },
+  { "polytimos", ALGO_POLYTIMOS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, polytimos_regenhash, NULL, NULL, queue_polytimos_kernel, gen_hash, append_x11_compiler_options },
 
   { "x16r", ALGO_X16R, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16r_regenhash, NULL, NULL, queue_x16r_kernel, gen_hash, append_x13_compiler_options, enqueue_x16r_kernels },
   { "x16s", ALGO_X16S, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16s_regenhash, NULL, NULL, queue_x16s_kernel, gen_hash, append_x13_compiler_options, enqueue_x16s_kernels },
