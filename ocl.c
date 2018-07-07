@@ -741,6 +741,11 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 
     applog(LOG_DEBUG, "GPU %d: computing max. global thread count to %u", gpu, (unsigned)(cgpu->thread_concurrency));
   }
+  else if (cgpu->algorithm.type == ALGO_LYRA2Z && !cgpu->opt_tc) {
+	  size_t GlobalThreads;
+	  set_threads_hashes(1, clState->compute_shaders, &GlobalThreads, 1, &cgpu->intensity, &cgpu->xintensity, &cgpu->rawintensity, &cgpu->algorithm);
+	  cgpu->thread_concurrency = GlobalThreads;
+  }
   else if (!cgpu->opt_tc) {
     unsigned int sixtyfours;
 
@@ -1026,6 +1031,13 @@ out:
 	  applog(LOG_ERR, "Error %d: clCreateBuffer (CLbuffer0)", status);
 	  return NULL;
   }
+
+  clState->MidstateBuf = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, 64, NULL, &status);
+  if (status != CL_SUCCESS) {
+	  applog(LOG_ERR, "Error %d: clCreateBuffer (MidstateBuf)", status);
+	  return NULL;
+  }
+
   applog(LOG_DEBUG, "Using output buffer sized %lu", BUFFERSIZE);
   clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, BUFFERSIZE, NULL, &status);
   if (status != CL_SUCCESS) {
@@ -1156,28 +1168,8 @@ out:
 	  readbufsize = 128 + 16; // midstate + endofdata (16)
   }
 
-  applog(LOG_DEBUG, "Using read buffer sized %lu", (unsigned long)readbufsize);
-  clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, readbufsize, NULL, &status);
-  if (status != CL_SUCCESS) {
-    applog(LOG_ERR, "Error %d: clCreateBuffer (CLbuffer0)", status);
-    return NULL;
-  }
-
-  clState->MidstateBuf = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, 64, NULL, &status);
-  if (status != CL_SUCCESS) {
-    applog(LOG_ERR, "Error %d: clCreateBuffer (MidstateBuf)", status);
-	return NULL;
-  }
 
   clState->devid = cgpu->device_id;
-
-  size_t buffersize = MAX(sizeof(sols_t), BUFFERSIZE);
-  applog(LOG_DEBUG, "Using output buffer sized %lu", buffersize);
-  clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, buffersize, NULL, &status);
-  if (status != CL_SUCCESS) {
-    applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
-    return NULL;
-  }
 
   return clState;
 }

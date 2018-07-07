@@ -995,6 +995,47 @@ static cl_int queue_lyra2z_kernel(struct __clState *clState, struct _dev_blk_ctx
 	return status;
 }
 
+void initialize_lyra2Z_kernel(_clState *clState, size_t scan_size) {
+	/*cl_int status;
+	// cl_int blockbuff = already initialized in buff0
+	const size_t buf1size = scan_size * sizeof(unsigned long long) * 4;
+	const size_t big_size = scan_size * sizeof(unsigned long long) * 12 * 4 * 4; // a matrix 3 rows 4 columns, 4 of them per hyper, 4 hypers
+	clState->buffer1 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, buf1size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (hash passing betwee stages); very unlikely to happen, system overloaded?", status);
+	}
+	clState->padbuffer8 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, big_size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (big pad); most likely scan size too big!", status);
+	}*/
+	cl_int status;
+	/*const size_t buf1size = scan_size * sizeof(unsigned long long) * 16;
+	const size_t big_size = scan_size * sizeof(unsigned long long) * LYRA2Z_SCRATCHBUF_SIZE;*/
+	clState->buffer1 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, 16 * 8 * scan_size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (hash passing betwee stages); very unlikely to happen, system overloaded?", status);
+	}
+
+
+	clState->Scratchpads = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, sizeof(cl_ulong)*LYRA2Z_SCRATCHBUF_SIZE * scan_size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (big pad); most likely scan size too big!", status);
+	}
+}
+
+
+cl_int truly_enqueue_lyra2Z_kernel(struct __clState *clState, size_t start, size_t scan, size_t local_size) {
+	cl_int status = 0;
+	cl_command_queue que = clState->commandQueue;
+	const size_t off2[] = { 0, start };
+	const size_t gws[] = { 4, scan };
+	const size_t local_work_size = 256;
+	const size_t mangle[] = { 4, 8 };
+	status |= clEnqueueNDRangeKernel(que, clState->kernel, 1, &start, &scan, &local_work_size, 0, NULL, NULL); // blake
+	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[0], 1, &start, &scan, &local_size, 0, NULL, NULL); // lyra2
+	return status;
+}
+
 
 extern char *bytearray2hex(const uint8_t *p, size_t len);
 extern bool bytearray_eq(const uint8_t *x, const uint8_t *y, size_t len);
@@ -1961,7 +2002,12 @@ static algorithm_settings_t algos[] = {
 
   { "lyra2re", ALGO_LYRA2RE, "", 1, 128, 128, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 2 * 8 * 4194304, 0, lyra2re_regenhash, blake256_midstate, blake256_prepare_work, queue_lyra2re_kernel, gen_hash, NULL },
   { "lyra2rev2", ALGO_LYRA2REV2, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, lyra2rev2_regenhash, blake256_midstate, blake256_prepare_work, queue_lyra2rev2_kernel, gen_hash, append_neoscrypt_compiler_options },
-  { "lyra2Z"   , ALGO_LYRA2Z   , "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 1, 0, 0, lyra2Z_regenhash,  blake256_midstate, blake256_prepare_work, queue_lyra2z_kernel, gen_hash, NULL },
+  { "lyra2Z"   , ALGO_LYRA2Z   , "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 1, 0, 0, lyra2Z_regenhash,  blake256_midstate, blake256_prepare_work, queue_lyra2z_kernel, gen_hash, append_neoscrypt_compiler_options, NULL,
+  {
+	initialize_lyra2Z_kernel,
+	truly_enqueue_lyra2Z_kernel
+  } 
+},
   { "lyra2rev2.mdz", ALGO_LYRA2REV2, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, lyra2rev2_regenhash, blake256_midstate, blake256_prepare_work, queue_lyra2rev2_kernel, gen_hash, append_neoscrypt_compiler_options, NULL,
 {
 	initialize_lyra2rev2_mdz,
