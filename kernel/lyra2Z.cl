@@ -65,7 +65,6 @@ typedef long sph_s64;
 */
 
 #define memshift 3
-/*#include "blake256.cl"*/
 #include "lyra2v16.cl"
 
 #define SWAP4(x) as_uint(as_uchar4(x).wzyx)
