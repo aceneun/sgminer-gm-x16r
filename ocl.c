@@ -152,26 +152,6 @@ int clDevicesNum(void) {
       clGetDeviceInfo(devices[j], CL_DEVICE_NAME, sizeof(pbuff), pbuff, NULL);
       applog(LOG_INFO, "\t%i\t%s", j, pbuff);
 
-#ifndef CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD
-#define CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD        1
-#define CL_DEVICE_TOPOLOGY_AMD                  0x4037
-
-      typedef union
-      {
-        struct { cl_uint type; cl_uint data[5]; } raw;
-        struct { cl_uint type; cl_char unused[17]; cl_char bus; cl_char device; cl_char function; } pcie;
-      } cl_device_topology_amd;
-#endif
-      cl_device_topology_amd topology;
-      status = clGetDeviceInfo (devices[j], CL_DEVICE_TOPOLOGY_AMD, sizeof(cl_device_topology_amd), &topology, NULL);
-      memset(gpus[j].sysfs_info.pcie_index, 0xff, sizeof(gpus[j].sysfs_info.pcie_index));
-      if (status == CL_SUCCESS && topology.raw.type == CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD) {
-        uint8_t *pcie_index = gpus[j].sysfs_info.pcie_index;
-        pcie_index[0] = topology.pcie.bus;
-        pcie_index[1] = topology.pcie.device;
-        pcie_index[2] = topology.pcie.function;
-        applog(LOG_DEBUG, "GPU%d: detected PCIe topology 0000:%.2x:%.2x.%.1x", j, pcie_index[0], pcie_index[1], pcie_index[2]);
-      }
     }
     free(devices);
   }

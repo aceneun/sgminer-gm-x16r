@@ -423,7 +423,7 @@ char *set_gpu_powertune(char *arg)
   if (nextptr == NULL)
     return "Invalid parameters for set gpu powertune";
   val = atoi(nextptr);
-  if (val < -99 || val > 499)
+  if (val < -99 || val > 99)
     return "Invalid value passed to set_gpu_powertune";
 
   gpus[device++].gpu_powertune = val;
@@ -431,7 +431,7 @@ char *set_gpu_powertune(char *arg)
   while ((nextptr = strtok(NULL, ",")) != NULL) {
     nextptr[-1] = ',';
     val = atoi(nextptr);
-    if (val < -99 || val > 499)
+    if (val < -99 || val > 99)
       return "Invalid value passed to set_gpu_powertune";
 
     gpus[device++].gpu_powertune = val;
@@ -487,7 +487,7 @@ char *set_temp_overheat(char *arg)
     return "Invalid value passed to set temp overheat";
 
   gpus[device].adl.overtemp = val;
-  gpus[device++].sysfs_info.overheat_temp = val;
+  gpus[device++].sysfs_info.OverHeatTemp = val;
 
   while ((nextptr = strtok(NULL, ",")) != NULL) {
     val = atoi(nextptr);
@@ -495,12 +495,12 @@ char *set_temp_overheat(char *arg)
       return "Invalid value passed to set temp overheat";
 
     gpus[device].adl.overtemp = val;
-    gpus[device++].sysfs_info.overheat_temp = val;
+    gpus[device++].sysfs_info.OverHeatTemp = val;
   }
   if (device == 1) {
     for (i = device; i < MAX_GPUDEVICES; i++) {
       gpus[i].adl.overtemp = val;
-      gpus[i].sysfs_info.overheat_temp = val;
+      gpus[i].sysfs_info.OverHeatTemp = val;
     }
   }
 
@@ -521,7 +521,7 @@ char *set_temp_target(char *arg)
 
   tt = &gpus[device].adl.targettemp;
   *tt = val;
-  tt = (int*) &gpus[device++].sysfs_info.target_temp;
+  tt = (int*) &gpus[device++].sysfs_info.TargetTemp;
   *tt = val;
 
   while ((nextptr = strtok(NULL, ",")) != NULL) {
@@ -531,14 +531,14 @@ char *set_temp_target(char *arg)
 
     tt = &gpus[device].adl.targettemp;
     *tt = val;
-    tt = (int*) &gpus[device++].sysfs_info.target_temp;
+    tt = (int*) &gpus[device++].sysfs_info.TargetTemp;
     *tt = val;    
   }
   if (device == 1) {
     for (i = device; i < MAX_GPUDEVICES; i++) {
       tt = &gpus[i].adl.targettemp;
       *tt = val;
-      tt = (int*) &gpus[i].sysfs_info.target_temp;
+      tt = (int*) &gpus[i].sysfs_info.TargetTemp;
       *tt = val;
     }
   }
@@ -1719,7 +1719,7 @@ struct device_drv opencl_drv = {
   /*.name = */      "GPU",
   /*.drv_detect = */    opencl_detect,
   /*.reinit_device = */   reinit_opencl_device,
-#if (defined HAVE_ADL) || (defined __linux__)
+#if (defined HAVE_ADL)
   /*.get_statline_before = */ get_opencl_statline_before,
 #else
   NULL,

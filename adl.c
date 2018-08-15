@@ -18,7 +18,7 @@
  
 #include "miner.h"
 
-bool adl_active = false;
+bool adl_active;
 
 #if defined(HAVE_ADL) && (defined(__unix__) || defined (WIN32))
 
@@ -123,6 +123,8 @@ static  ADL_OVERDRIVE6_POWERCONTROL_SET   ADL_Overdrive6_PowerControl_Set;
 static int iNumberAdapters;
 static LPAdapterInfo lpInfo = NULL;
 
+int adl_set_fanspeed(int gpu, float iFanSpeed);
+static float __gpu_temp(struct gpu_adl *ga);
 
 char *adl_error_desc(int error)
 {

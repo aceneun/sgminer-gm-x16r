@@ -59,7 +59,6 @@ char *curly = ":D";
 #include "donate.h"
 #include "findnonce.h"
 #include "adl.h"
-#include "sysfs-gpu-controls.h"
 #include "driver-opencl.h"
 #include "bench_block.h"
 
@@ -5515,11 +5514,6 @@ static void hashmeter(int thr_id, struct timeval *diff,
   showlog = true;
   cgtime(&total_tv_end);
 
-  struct timeval runtime;
-  timersub(&total_tv_end, &launch_time, &runtime);
-  double runtime_secs = runtime.tv_sec + 1e-6 * runtime.tv_usec;
-  applog(LOG_DEBUG, "total hashes: %g, total runtime / s: %g", 1e6 * total_mhashes_done, runtime_secs);
-
   local_secs = (double)total_diff.tv_sec + ((double)total_diff.tv_usec / 1000000.0);
   decay_time(&total_rolling, local_mhashes_done / local_secs, local_secs);
   global_hashrate = ((unsigned long long)lround(total_rolling)) * 1000000;
@@ -5606,18 +5600,6 @@ static bool parse_stratum_response(struct pool *pool, char *s)
     goto out;
   }
 
-  json_t *status = json_object_get(res_val, "status");
-
-  if (status && pool->algorithm.type == ALGO_CRYPTONIGHT) {
-    const char *s = json_string_value(status);
-
-    if (s && !strcmp(s, "KEEPALIVED")) {
-      applog(LOG_DEBUG, "Keepalived from %s received", get_pool_name(pool));
-      ret = true;
-      goto out;
-    }
-  }
-
   id = json_integer_value(id_val);
 
   mutex_lock(&sshare_lock);
@@ -5656,8 +5638,7 @@ static bool parse_stratum_response(struct pool *pool, char *s)
         goto out;
       }
 
-      json_t *status = json_object_get(res_val, "status");
-      if (json_is_null(err_val) && status != NULL && !strcmp(json_string_value(status), "OK")) {
+	  if (json_is_null(err_val) && !strcmp(json_string_value(json_object_get(res_val, "status")), "OK")) {
         success = true;
       }
       else {
@@ -8222,8 +8203,6 @@ static void *watchpool_thread(void __maybe_unused *userdata)
         pool->testing = false;
       }
 
-      sock_keepalived(pool, pool->XMRAuthID, -1);
-
       /* Test pool is idle once every minute */
       if (pool->idle && now.tv_sec - pool->tv_idle.tv_sec > 30) {
         cgtime(&pool->tv_idle);
@@ -8388,8 +8367,9 @@ static void *watchdog_thread(void __maybe_unused *userdata)
       denable = &cgpu->deven;
       snprintf(dev_str, sizeof(dev_str), "%s%d", cgpu->drv->name, gpu);
 
-      gpu_autotune(gpu, denable);
-      if (opt_debug) {
+	  if (adl_active && cgpu->has_adl || cgpu->has_sysfs_hwcontrols)
+			  gpu_autotune(gpu, denable);
+	 if (opt_debug && cgpu->has_adl) {
         int engineclock = 0, memclock = 0, activity = 0, fanspeed = 0, fanpercent = 0, powertune = 0;
         float temp = 0, vddc = 0;
 
@@ -8415,11 +8395,13 @@ static void *watchdog_thread(void __maybe_unused *userdata)
 
         dev_error(cgpu, REASON_DEV_SICK_IDLE_60);
         event_notify("gpu_sick");
-
-        if (gpu_activity(gpu) > 50) {
-          applog(LOG_ERR, "GPU still showing activity suggesting a hard hang.");
-          applog(LOG_ERR, "Will not attempt to auto-restart it.");
-        } else if (opt_restart) {
+        #ifdef HAVE_ADL
+            if (adl_active && cgpu->has_adl && gpu_activity(gpu) > 50) {
+              applog(LOG_ERR, "GPU still showing activity suggesting a hard hang.");
+              applog(LOG_ERR, "Will not attempt to auto-restart it.");
+            } else 
+        #endif	
+		if (opt_restart) {
           applog(LOG_ERR, "%s: Attempting to restart", dev_str);
           reinit_device(cgpu);
         }
@@ -8550,7 +8532,6 @@ static void clean_up(bool restarting)
 #ifdef HAVE_ADL
   clear_adl(nDevs);
 #endif
-  sysfs_cleanup(nDevs);
   cgtime(&total_tv_end);
 #ifdef WIN32
   timeEndPeriod(1);
