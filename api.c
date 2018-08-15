@@ -122,8 +122,7 @@ struct CODES codes[] = {
  { SEVERITY_ERR,   MSG_NOPOOL,  PARAM_NONE, "No pools" },
 
  { SEVERITY_SUCC,  MSG_DEVS,  PARAM_DMAX,   "%d GPU(s)" },
- { SEVERITY_ERR,   MSG_NODEVS,  PARAM_NONE, "No GPUs"
- },
+ { SEVERITY_ERR,   MSG_NODEVS,  PARAM_NONE, "No GPUs" },
 
  { SEVERITY_SUCC,  MSG_SUMM,  PARAM_NONE, "Summary" },
  { SEVERITY_INFO,  MSG_GPUDIS,  PARAM_GPU,  "GPU %d set disable flag" },
