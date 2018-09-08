@@ -620,9 +620,6 @@ void luffakernel(__global hash_t *hash)
 
 void cubehashkernel(__global hash_t *hash)
 {
-  uint gid = get_global_id(0);
-  __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-
   // cubehash.h1
 
   uint state[32] = {   0x2AEA2A61U, 0x50F494D4U, 0x2D538B8BU, 0x4167D83EU, 0x3FEE2313U, 0xC701CF8CU,
