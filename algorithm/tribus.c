@@ -84,7 +84,7 @@ void tribus_regenhash(struct work *work)
     trihash(ohash, data);
 }
 
-#if 0
+
 static const uint32_t diff1targ = 0x0000ffff;
 
 /* Used externally as confirmation of correct OCL code */
@@ -151,5 +151,5 @@ bool scanhash_tribus(struct thr_info *thr, const unsigned char __maybe_unused *p
 
 	return ret;
 }
-#endif
+
 

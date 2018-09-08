@@ -935,6 +935,9 @@ out:
     case ALGO_ETHASH:
       readbufsize = 32;
       break;
+	case ALGO_TRIBUS:
+	  readbufsize = 128 + 16; // midstate + endofdata (16)
+	  break;
     default:
       readbufsize = 128;
   }
@@ -1143,11 +1146,6 @@ out:
       return NULL;
     }
   }
-
-  if (algorithm->type == ALGO_TRIBUS) {
-	  readbufsize = 128 + 16; // midstate + endofdata (16)
-  }
-
 
   clState->devid = cgpu->device_id;
 

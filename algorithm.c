@@ -53,6 +53,7 @@
 #include "algorithm/c11.h"
 #include "algorithm/lyra2Z.h"
 #include "algorithm/polytimos.h"
+#include "algorithm/geek.h"
 
 #include "compat.h"
 
@@ -95,7 +96,8 @@ const char *algorithm_type_str[] = {
   "Ethash",
   "Cryptonight",
   "Equihash",
-  "Polytimos"
+  "Polytimos",
+  "Geek"
 };
 
 void sha256(const unsigned char *message, unsigned int len, unsigned char *digest)
@@ -1036,6 +1038,45 @@ cl_int truly_enqueue_lyra2Z_kernel(struct __clState *clState, size_t start, size
 	return status;
 }
 
+static cl_int queue_geek_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	cl_kernel *kernel;
+	unsigned int num;
+	cl_ulong le_target;
+	cl_int status = 0;
+
+	le_target = *(cl_ulong *)(blk->work->device_target + 24);
+	flip80(clState->cldata, blk->work->data);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+
+	// blake - search
+	kernel = &clState->kernel;
+	num = 0;
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->padbuffer8);
+	// bmw - search1
+	kernel = clState->extra_kernels;
+	CL_SET_ARG_0(clState->padbuffer8);
+	// echo - search2
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// shaba - search3
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// groestl - search4
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// cubehash - search5
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// keccak - search6
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// hamsi - search7
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// simd - search8
+	num = 0;
+	CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+
+	return status;
+}
 
 extern char *bytearray2hex(const uint8_t *p, size_t len);
 extern bool bytearray_eq(const uint8_t *x, const uint8_t *y, size_t len);
@@ -1985,8 +2026,6 @@ static algorithm_settings_t algos[] = {
   { "bitblock", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 14, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, NULL, queue_bitblock_kernel, gen_hash, append_x13_compiler_options },
   { "bitblockold", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, NULL, queue_bitblockold_kernel, gen_hash, append_x13_compiler_options },
 
-  { "polytimos", ALGO_POLYTIMOS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, polytimos_regenhash, NULL, NULL, queue_polytimos_kernel, gen_hash, append_x11_compiler_options },
-
   { "x16r", ALGO_X16R, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16r_regenhash, NULL, NULL, queue_x16r_kernel, gen_hash, append_x13_compiler_options, enqueue_x16r_kernels },
   { "x16s", ALGO_X16S, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16s_regenhash, NULL, NULL, queue_x16s_kernel, gen_hash, append_x13_compiler_options, enqueue_x16s_kernels },
   { "x17", ALGO_X17, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 16,  8 * 16 * 4194304, 0, x17_regenhash, NULL, NULL, queue_x17_kernel, gen_hash, append_x13_compiler_options},
@@ -1995,6 +2034,8 @@ static algorithm_settings_t algos[] = {
   { "tribus", ALGO_TRIBUS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 2, 8 * 16 * 4194304, 0, tribus_regenhash, NULL, precalc_hash_tribus, queue_tribus_kernel, gen_hash, append_x11_compiler_options, NULL},
   { "aergo", ALGO_AERGO, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 27, 8 * 16 * 4194304, 0, aergo_regenhash, NULL, NULL, queue_aergo_kernel, gen_hash, append_x13_compiler_options },
   { "c11", ALGO_C11, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10,  8 * 16 * 4194304, 0, c11_regenhash, NULL, NULL, queue_c11_kernel, gen_hash, append_x11_compiler_options},
+  { "polytimos", ALGO_POLYTIMOS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, polytimos_regenhash, NULL, NULL, queue_polytimos_kernel, gen_hash, append_x11_compiler_options },
+  { "geek", ALGO_GEEK, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 8, 4 * 16 * 4194304, 0, geek_regenhash, NULL, NULL, queue_geek_kernel, gen_hash, append_x13_compiler_options },
 
   { "talkcoin-mod", ALGO_NIST, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 8 * 16 * 4194304, 0, talkcoin_regenhash, NULL, NULL, queue_talkcoin_mod_kernel, gen_hash, append_x11_compiler_options },
 
