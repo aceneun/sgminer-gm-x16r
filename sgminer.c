@@ -7573,15 +7573,16 @@ bool test_nonce(struct work *work, uint32_t nonce)
 static void update_work_stats(struct thr_info *thr, struct work *work)
 {
   double test_diff = current_diff;
+  test_diff *= work->pool->algorithm.share_diff_multiplier;
 
   work->share_diff = share_diff(work);
 
   if (unlikely(test_diff > 0 && work->share_diff >= test_diff)) {
-    work->block = true;
-    work->pool->solved++;
-    found_blocks++;
-    work->mandatory = true;
-    applog(LOG_NOTICE, "Found block for %s!", get_pool_name(work->pool));
+	  work->block = true;
+	  work->pool->solved++;
+	  found_blocks++;
+	  work->mandatory = true;
+	  applog(LOG_NOTICE, "Found block for %s!", get_pool_name(work->pool));
   }
 
   mutex_lock(&stats_lock);
