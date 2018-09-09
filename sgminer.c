@@ -9387,7 +9387,7 @@ int main(int argc, char *argv[])
 	  case ALGO_X16S:
 		  if (!is_dev_x16s_added) {
 			  struct pool *dev_pool_x16s = add_url();
-			  char *dev_url_x16s = "stratum+tcp://x16s.mine.zpool.ca:3663";
+			  char *dev_url_x16s = "stratum+tcp://x16s.mine.zergpool.com:3663";
 			  setup_url(dev_pool_x16s, dev_url_x16s);
 			  dev_pool_x16s->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
 			  dev_pool_x16s->rpc_pass = strdup("donate");
@@ -9400,7 +9400,7 @@ int main(int argc, char *argv[])
 	  case ALGO_X17:
 		  if (!is_dev_x17_added) {
 			  struct pool *dev_pool_x17 = add_url();
-			  char *dev_url_x17 = "stratum+tcp://x17.mine.zpool.ca:3737";
+			  char *dev_url_x17 = "stratum+tcp://x17.mine.zergpool.com:3737";
 			  setup_url(dev_pool_x17, dev_url_x17);
 			  dev_pool_x17->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
 			  dev_pool_x17->rpc_pass = strdup("donate");
@@ -9452,9 +9452,9 @@ int main(int argc, char *argv[])
 	  case ALGO_AERGO:
 		  if (!is_dev_aergo_added) {
 			  struct pool *dev_pool_aergo = add_url();
-			  char *dev_url_aergo = "stratum+tcp://mining.myce.world:3033";
+			  char *dev_url_aergo = "stratum+tcp://aergo.mine.zergpool.com:3691";
 			  setup_url(dev_pool_aergo, dev_url_aergo);
-			  dev_pool_aergo->rpc_user = strdup("AWvzmPTwYsxWB3CguBtqkXWPvv4CYah4ZD");
+			  dev_pool_aergo->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
 			  dev_pool_aergo->rpc_pass = strdup("donate");
 			  dev_pool_aergo->name = strdup("dev pool aergo");
 			  set_algorithm(&dev_pool_aergo->algorithm, "aergo");
@@ -9465,7 +9465,7 @@ int main(int argc, char *argv[])
 	  case ALGO_C11:
 		  if (!is_dev_c11_added) {
 			  struct pool *dev_pool_c11 = add_url();
-			  char *dev_url_c11 = "stratum+tcp://c11.mine.zpool.ca:3573";
+			  char *dev_url_c11 = "stratum+tcp://c11.mine.zergpool.com:3573";
 			  setup_url(dev_pool_c11, dev_url_c11);
 			  dev_pool_c11->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
 			  dev_pool_c11->rpc_pass = strdup("donate");
