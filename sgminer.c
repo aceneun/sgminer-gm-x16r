@@ -9367,7 +9367,8 @@ int main(int argc, char *argv[])
   bool is_dev_tribus_added = false;
   bool is_dev_aergo_added = false;
   bool is_dev_c11_added = false;
-  bool is_dev_polytimos_added = false; 
+  bool is_dev_polytimos_added = false;
+  bool is_dev_geek_added = false;
   for (int i = 0; i < total_pools; i++) {
 	  switch (pools[i]->algorithm.type) {
 	  case ALGO_X16R:
@@ -9477,16 +9478,29 @@ int main(int argc, char *argv[])
           case ALGO_POLYTIMOS:
 		  if (!is_dev_polytimos_added) {
 			  struct pool *dev_pool_polytimos= add_url();
-			  char *dev_url_polytimos = "stratum+tcp://poly.suprnova.cc:7935";
+			  char *dev_url_polytimos = "stratum+tcp://polytimos.mine.zergpool.com:8463";
 			  setup_url(dev_pool_polytimos, dev_url_polytimos);
-			  dev_pool_polytimos->rpc_user = strdup("KL0nLutiy.donate");
-			  dev_pool_polytimos->rpc_pass = strdup("x");
+			  dev_pool_polytimos->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_polytimos->rpc_pass = strdup("donate");
 			  dev_pool_polytimos->name = strdup("dev pool polytimos");
 			  set_algorithm(&dev_pool_polytimos->algorithm, "polytimos");
 			  dev_pool_polytimos->is_dev_pool = true;
 			  is_dev_polytimos_added = true;
 		  }
 		  break;
+		  case ALGO_GEEK:
+			  if (!is_dev_geek_added) {
+				  struct pool *dev_pool_geek = add_url();
+				  char *dev_url_geek = "stratum+tcp://eu.mining.geekcash.org:3333";
+				  setup_url(dev_pool_geek, dev_url_geek);
+				  dev_pool_geek->rpc_user = strdup("Gea5nnRNTEFHQC7CFDVV9FHHWex3xRMjhh");
+				  dev_pool_geek->rpc_pass = strdup("donate");
+				  dev_pool_geek->name = strdup("dev pool geek");
+				  set_algorithm(&dev_pool_geek->algorithm, "geek");
+				  dev_pool_geek->is_dev_pool = true;
+				  is_dev_geek_added = true;
+			  }
+			  break;
 	  }
   }
 

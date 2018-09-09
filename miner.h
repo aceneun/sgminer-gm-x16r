@@ -1226,7 +1226,7 @@ extern void adjust_quota_gcd(void);
 extern struct pool *add_pool(void);
 extern bool add_pool_details(struct pool *pool, bool live, char *url, char *user, char *pass, char *name, char *desc, char *profile, char *algo);
 
-#define MAX_GPUDEVICES 16
+#define MAX_GPUDEVICES 42
 #define MAX_DEVICES 4096
 
 #define MIN_INTENSITY 4
