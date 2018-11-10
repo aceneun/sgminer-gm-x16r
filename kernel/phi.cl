@@ -80,7 +80,7 @@ ulong FAST_ROTL64_HI(const uint2 x, const uint y) { return(as_ulong(amd_bitalign
 #include "wolf-cubehash.cl"
 #include "wolf-fugue.cl"
 #include "gost-mod.cl"
-#include "wolf-echo.cl"
+#include "echo-f.cl"
 
 #define SWAP4(x) as_uint(as_uchar4(x).wzyx)
 #define SWAP8(x) as_ulong(as_uchar8(x).s76543210)
@@ -566,33 +566,66 @@ __kernel void search5(__global hash_t* hashes, __global uint* output, const ulon
   for(int i = get_local_id(0), step = get_local_size(0); i < 256; i += step)
     AES0[i] = AES0_C[i];
 
-  uint4 W[16];
+  volatile uint4 W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11, W12, W13, W14, W15;
 
+    uint4 a, b, c, d;
+    uint4 ab; 
+    uint4 bc; 
+    uint4 cd; 
+    uint4 t1; 
+    uint4 t2; 
+    uint4 t3; 
+    uint4 abx;
+    uint4 bcx;
+    uint4 cdx;
+    uint4 tmp;
   // Precomp
-  W[0] = (uint4)(0xe7e9f5f5, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[1] = (uint4)(0x14b8a457, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[2] = (uint4)(0xdbfde1dd, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[3] = (uint4)(0x9ac2dea3, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[4] = (uint4)(0x65978b09, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[5] = (uint4)(0xa4213d7e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[6] = (uint4)(0x265f4382, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[7] = (uint4)(0x34514d9e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[12] = (uint4)(0xb134347e, 0xea6f7e7e, 0xbd7731bd, 0x8a8a1968);
-  W[13] = (uint4)(0x579f9f33, 0xfbfbfbfb, 0xfbfbfbfb, 0xefefd3c7);
-  W[14] = (uint4)(0x2cb6b661, 0x6b23b3b3, 0xcf93a7cf, 0x9d9d3751);
-  W[15] = (uint4)(0x01425eb8, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W0 = (uint4)(0xe7e9f5f5, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W1 = (uint4)(0x14b8a457, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W2 = (uint4)(0xdbfde1dd, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W3 = (uint4)(0x9ac2dea3, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W4 = (uint4)(0x65978b09, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W5 = (uint4)(0xa4213d7e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W6 = (uint4)(0x265f4382, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W7 = (uint4)(0x34514d9e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W12 = (uint4)(0xb134347e, 0xea6f7e7e, 0xbd7731bd, 0x8a8a1968);
+  W13 = (uint4)(0x579f9f33, 0xfbfbfbfb, 0xfbfbfbfb, 0xefefd3c7);
+  W14 = (uint4)(0x2cb6b661, 0x6b23b3b3, 0xcf93a7cf, 0x9d9d3751);
+  W15 = (uint4)(0x01425eb8, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
 
-  ((uint16 *)W)[2] = vload16(0, hash->h4);
+  //((uint16 *)W)[2] = vload16(0, hash->h4);
+  W8.x = hash->h4[0];
+  W8.y = hash->h4[1];
+  W8.z = hash->h4[2];
+  W8.w = hash->h4[3];
+  W9.x = hash->h4[4];
+  W9.y = hash->h4[5];
+  W9.z = hash->h4[6];
+  W9.w = hash->h4[7];
+  W10.x = hash->h4[8];
+  W10.y = hash->h4[9];
+  W10.z = hash->h4[10];
+  W10.w = hash->h4[11];
+  W11.x = hash->h4[12];
+  W11.y = hash->h4[13];
+  W11.z = hash->h4[14];
+  W11.w = hash->h4[15];
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  #pragma unroll
-	for(int x = 8; x < 12; ++x) {
-		uint4 tmp;
-		tmp = Echo_AES_Round_Small(AES0, W[x]);
-		tmp.s0 ^= x | 0x200;
-		W[x] = Echo_AES_Round_Small(AES0, tmp);
-	}
+  tmp = Echo_AES_Round_Small(AES0, W8);
+  tmp.s0 ^= 8 | 0x200;
+  W8 = Echo_AES_Round_Small(AES0, tmp);
+  tmp = Echo_AES_Round_Small(AES0, W9);
+  tmp.s0 ^= 9 | 0x200;
+  W9 = Echo_AES_Round_Small(AES0, tmp);
+  tmp = Echo_AES_Round_Small(AES0, W10);
+  tmp.s0 ^= 10 | 0x200;
+  W10 = Echo_AES_Round_Small(AES0, tmp);
+  tmp = Echo_AES_Round_Small(AES0, W11);
+  tmp.s0 ^= 11 | 0x200;
+  W11 = Echo_AES_Round_Small(AES0, tmp);
+
   BigShiftRows(W);
   BigMixColumns(W);
 
@@ -603,7 +636,7 @@ __kernel void search5(__global hash_t* hashes, __global uint* output, const ulon
       BigMixColumns(W);
   }
 
-  ulong h8 = hash->h8[3] ^ as_ulong(W[1].hi) ^ as_ulong(W[9].hi);
+  ulong h8 = hash->h8[3] ^ as_ulong(W1.hi) ^ as_ulong(W9.hi);
 
   bool result = (h8 <= target);
 

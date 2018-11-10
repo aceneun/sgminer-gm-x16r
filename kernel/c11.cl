@@ -109,8 +109,8 @@ ulong ROTL64_2(const uint2 vv, const int r) { return as_ulong((amd_bitalign((vv)
 #include "wolf-luffa.cl"
 #include "wolf-cubehash.cl"
 #include "wolf-shavite.cl"
-#include "simd.cl"
-#include "wolf-echo.cl"
+#include "simd-f.cl"
+#include "echo-f.cl"
 
 #define SWAP4(x) as_uint(as_uchar4(x).wzyx)
 #define SWAP8(x) as_ulong(as_uchar8(x).s76543210)
@@ -806,128 +806,139 @@ __kernel void search8(__global hash_t* hashes)
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search9(__global hash_t* hashes)
 {
-  uint gid = get_global_id(0);
+    uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
-
-  __local sph_s32 yoff[256];
-
-  int init = get_local_id(0);
-  int step = get_local_size(0);
-
-  for (int i = init; i < 256; i += step)
-    yoff[i] = yoff_b_n[i];
-
-  barrier(CLK_LOCAL_MEM_FENCE);
-
+  
   // simd
-  s32 q[256];
-  unsigned char x[128];
-  for(unsigned int i = 0; i < 64; i++)
-    x[i] = hash->h1[i];
-  for(unsigned int i = 64; i < 128; i++)
-    x[i] = 0;
+    volatile s32 q[256];
+    __local unsigned char x[128 * WORKSIZE];
+    uint tid = get_local_id(0);
+    for(unsigned int i = 0; i < 64; i++)
+  x[tid + WORKSIZE * i] = hash->h1[i];
+    for(unsigned int i = 64; i < 128; i++)
+  x[tid + WORKSIZE * i] = 0;
 
-  u32 A0 = C32(0x0BA16B95), A1 = C32(0x72F999AD), A2 = C32(0x9FECC2AE), A3 = C32(0xBA3264FC), A4 = C32(0x5E894929), A5 = C32(0x8E9F30E5), A6 = C32(0x2F1DAA37), A7 = C32(0xF0F2C558);
-  u32 B0 = C32(0xAC506643), B1 = C32(0xA90635A5), B2 = C32(0xE25B878B), B3 = C32(0xAAB7878F), B4 = C32(0x88817F7A), B5 = C32(0x0A02892B), B6 = C32(0x559A7550), B7 = C32(0x598F657E);
-  u32 C0 = C32(0x7EEF60A1), C1 = C32(0x6B70E3E8), C2 = C32(0x9C1714D1), C3 = C32(0xB958E2A8), C4 = C32(0xAB02675E), C5 = C32(0xED1C014F), C6 = C32(0xCD8D65BB), C7 = C32(0xFDB7A257);
-  u32 D0 = C32(0x09254899), D1 = C32(0xD699C7BC), D2 = C32(0x9019B6DC), D3 = C32(0x2B9022E4), D4 = C32(0x8FA14956), D5 = C32(0x21BF9BD3), D6 = C32(0xB94D0943), D7 = C32(0x6FFDDC22);
+    __private volatile s32 m;
+    __private volatile s32 n;
+    __private volatile s32 t;
+    __private volatile u32 tA0;
+    __private volatile u32 tA1;
+    __private volatile u32 tA2;
+    __private volatile u32 tA3;
+    __private volatile u32 tA4;
+    __private volatile u32 tA5;
+    __private volatile u32 tA6;
+    __private volatile u32 tA7;
+    s32 d1_0, d1_1, d1_2, d1_3, d1_4, d1_5, d1_6, d1_7;
+    s32 d2_0, d2_1, d2_2, d2_3, d2_4, d2_5, d2_6, d2_7;
+    s32 x0;
+    s32 x1;
+    s32 x2;
+    s32 x3;
+    s32 a0;
+    s32 a1;
+    s32 a2;
+    s32 a3;
+    s32 b0;
+    s32 b1;
+    s32 b2;
+    s32 b3;
 
-  FFT256(0, 1, 0, ll1);
-  for (int i = 0; i < 256; i ++) {
-    const s32 tq = REDS1(REDS1(q[i] + yoff[i]));
-    q[i] = select(tq - 257, tq, tq <= 128);
-  }
+    u32 A0 = C32(0x0BA16B95), A1 = C32(0x72F999AD), A2 = C32(0x9FECC2AE), A3 = C32(0xBA3264FC), A4 = C32(0x5E894929), A5 = C32(0x8E9F30E5), A6 = C32(0x2F1DAA37), A7 = C32(0xF0F2C558);
+    u32 B0 = C32(0xAC506643), B1 = C32(0xA90635A5), B2 = C32(0xE25B878B), B3 = C32(0xAAB7878F), B4 = C32(0x88817F7A), B5 = C32(0x0A02892B), B6 = C32(0x559A7550), B7 = C32(0x598F657E);
+    u32 C0 = C32(0x7EEF60A1), C1 = C32(0x6B70E3E8), C2 = C32(0x9C1714D1), C3 = C32(0xB958E2A8), C4 = C32(0xAB02675E), C5 = C32(0xED1C014F), C6 = C32(0xCD8D65BB), C7 = C32(0xFDB7A257);
+    u32 D0 = C32(0x09254899), D1 = C32(0xD699C7BC), D2 = C32(0x9019B6DC), D3 = C32(0x2B9022E4), D4 = C32(0x8FA14956), D5 = C32(0x21BF9BD3), D6 = C32(0xB94D0943), D7 = C32(0x6FFDDC22);
 
-  A0 ^= hash->h4[0];
-  A1 ^= hash->h4[1];
-  A2 ^= hash->h4[2];
-  A3 ^= hash->h4[3];
-  A4 ^= hash->h4[4];
-  A5 ^= hash->h4[5];
-  A6 ^= hash->h4[6];
-  A7 ^= hash->h4[7];
-  B0 ^= hash->h4[8];
-  B1 ^= hash->h4[9];
-  B2 ^= hash->h4[10];
-  B3 ^= hash->h4[11];
-  B4 ^= hash->h4[12];
-  B5 ^= hash->h4[13];
-  B6 ^= hash->h4[14];
-  B7 ^= hash->h4[15];
+    FFT256(0, 1, 0, ll1);
+	 #pragma unroll 256
+    for (int i = 0; i < 256; i ++) {
+	    const s32 tq = REDS1(REDS1(q[i] + yoff_b_n[i]));
+		q[i] = select(tq - 257, tq, tq <= 128);
+    }
 
-  ONE_ROUND_BIG(0_, 0,  3, 23, 17, 27);
-  ONE_ROUND_BIG(1_, 1, 28, 19, 22,  7);
-  ONE_ROUND_BIG(2_, 2, 29,  9, 15,  5);
-  ONE_ROUND_BIG(3_, 3,  4, 13, 10, 25);
+    A0 ^= hash->h4[0];
+    A1 ^= hash->h4[1];
+    A2 ^= hash->h4[2];
+    A3 ^= hash->h4[3];
+    A4 ^= hash->h4[4];
+    A5 ^= hash->h4[5];
+    A6 ^= hash->h4[6];
+    A7 ^= hash->h4[7];
+    B0 ^= hash->h4[8];
+    B1 ^= hash->h4[9];
+    B2 ^= hash->h4[10];
+    B3 ^= hash->h4[11];
+    B4 ^= hash->h4[12];
+    B5 ^= hash->h4[13];
+    B6 ^= hash->h4[14];
+    B7 ^= hash->h4[15];
 
-  STEP_BIG(
-    C32(0x0BA16B95), C32(0x72F999AD), C32(0x9FECC2AE), C32(0xBA3264FC),
-    C32(0x5E894929), C32(0x8E9F30E5), C32(0x2F1DAA37), C32(0xF0F2C558),
-    IF,  4, 13, PP8_4_);
+    ONE_ROUND_BIG(0_, 0,  3, 23, 17, 27);
+    ONE_ROUND_BIG(1_, 1, 28, 19, 22,  7);
+    ONE_ROUND_BIG(2_, 2, 29,  9, 15,  5);
+    ONE_ROUND_BIG(3_, 3,  4, 13, 10, 25);
 
-  STEP_BIG(
-    C32(0xAC506643), C32(0xA90635A5), C32(0xE25B878B), C32(0xAAB7878F),
-    C32(0x88817F7A), C32(0x0A02892B), C32(0x559A7550), C32(0x598F657E),
-    IF, 13, 10, PP8_5_);
+    STEP_BIG(
+        C32(0x0BA16B95), C32(0x72F999AD), C32(0x9FECC2AE), C32(0xBA3264FC),
+        C32(0x5E894929), C32(0x8E9F30E5), C32(0x2F1DAA37), C32(0xF0F2C558),
+        IF,  4, 13, PP8_4_);
+    STEP_BIG(
+        C32(0xAC506643), C32(0xA90635A5), C32(0xE25B878B), C32(0xAAB7878F),
+        C32(0x88817F7A), C32(0x0A02892B), C32(0x559A7550), C32(0x598F657E),
+        IF, 13, 10, PP8_5_);
+    STEP_BIG(
+        C32(0x7EEF60A1), C32(0x6B70E3E8), C32(0x9C1714D1), C32(0xB958E2A8),
+        C32(0xAB02675E), C32(0xED1C014F), C32(0xCD8D65BB), C32(0xFDB7A257),
+        IF, 10, 25, PP8_6_);
+    STEP_BIG(
+        C32(0x09254899), C32(0xD699C7BC), C32(0x9019B6DC), C32(0x2B9022E4),
+        C32(0x8FA14956), C32(0x21BF9BD3), C32(0xB94D0943), C32(0x6FFDDC22),
+        IF, 25,  4, PP8_0_);
 
-  STEP_BIG(
-    C32(0x7EEF60A1), C32(0x6B70E3E8), C32(0x9C1714D1), C32(0xB958E2A8),
-    C32(0xAB02675E), C32(0xED1C014F), C32(0xCD8D65BB), C32(0xFDB7A257),
-    IF, 10, 25, PP8_6_);
+    u32 COPY_A0 = A0, COPY_A1 = A1, COPY_A2 = A2, COPY_A3 = A3, COPY_A4 = A4, COPY_A5 = A5, COPY_A6 = A6, COPY_A7 = A7;
+    u32 COPY_B0 = B0, COPY_B1 = B1, COPY_B2 = B2, COPY_B3 = B3, COPY_B4 = B4, COPY_B5 = B5, COPY_B6 = B6, COPY_B7 = B7;
+    u32 COPY_C0 = C0, COPY_C1 = C1, COPY_C2 = C2, COPY_C3 = C3, COPY_C4 = C4, COPY_C5 = C5, COPY_C6 = C6, COPY_C7 = C7;
+    u32 COPY_D0 = D0, COPY_D1 = D1, COPY_D2 = D2, COPY_D3 = D3, COPY_D4 = D4, COPY_D5 = D5, COPY_D6 = D6, COPY_D7 = D7;
 
-  STEP_BIG(
-    C32(0x09254899), C32(0xD699C7BC), C32(0x9019B6DC), C32(0x2B9022E4),
-    C32(0x8FA14956), C32(0x21BF9BD3), C32(0xB94D0943), C32(0x6FFDDC22),
-    IF, 25,  4, PP8_0_);
+    A0 ^= 0x200;
 
-  u32 COPY_A0 = A0, COPY_A1 = A1, COPY_A2 = A2, COPY_A3 = A3, COPY_A4 = A4, COPY_A5 = A5, COPY_A6 = A6, COPY_A7 = A7;
-  u32 COPY_B0 = B0, COPY_B1 = B1, COPY_B2 = B2, COPY_B3 = B3, COPY_B4 = B4, COPY_B5 = B5, COPY_B6 = B6, COPY_B7 = B7;
-  u32 COPY_C0 = C0, COPY_C1 = C1, COPY_C2 = C2, COPY_C3 = C3, COPY_C4 = C4, COPY_C5 = C5, COPY_C6 = C6, COPY_C7 = C7;
-  u32 COPY_D0 = D0, COPY_D1 = D1, COPY_D2 = D2, COPY_D3 = D3, COPY_D4 = D4, COPY_D5 = D5, COPY_D6 = D6, COPY_D7 = D7;
+    ONE_ROUND_BIG_PRECOMP(0_, 0,  3, 23, 17, 27);
+    ONE_ROUND_BIG_PRECOMP(1_, 1, 28, 19, 22,  7);
+    ONE_ROUND_BIG_PRECOMP(2_, 2, 29,  9, 15,  5);
+    ONE_ROUND_BIG_PRECOMP(3_, 3,  4, 13, 10, 25);
+    STEP_BIG(
+        COPY_A0, COPY_A1, COPY_A2, COPY_A3,
+        COPY_A4, COPY_A5, COPY_A6, COPY_A7,
+        IF,  4, 13, PP8_4_);
+    STEP_BIG(
+        COPY_B0, COPY_B1, COPY_B2, COPY_B3,
+        COPY_B4, COPY_B5, COPY_B6, COPY_B7,
+        IF, 13, 10, PP8_5_);
+    STEP_BIG(
+        COPY_C0, COPY_C1, COPY_C2, COPY_C3,
+        COPY_C4, COPY_C5, COPY_C6, COPY_C7,
+        IF, 10, 25, PP8_6_);
+    STEP_BIG(
+        COPY_D0, COPY_D1, COPY_D2, COPY_D3,
+        COPY_D4, COPY_D5, COPY_D6, COPY_D7,
+        IF, 25,  4, PP8_0_);
 
-  A0 ^= 0x200;
-
-  ONE_ROUND_BIG_PRECOMP(0_, 0,  3, 23, 17, 27);
-  ONE_ROUND_BIG_PRECOMP(1_, 1, 28, 19, 22,  7);
-  ONE_ROUND_BIG_PRECOMP(2_, 2, 29,  9, 15,  5);
-  ONE_ROUND_BIG_PRECOMP(3_, 3,  4, 13, 10, 25);
-
-  STEP_BIG(
-    COPY_A0, COPY_A1, COPY_A2, COPY_A3,
-    COPY_A4, COPY_A5, COPY_A6, COPY_A7,
-    IF,  4, 13, PP8_4_);
-
-  STEP_BIG(
-    COPY_B0, COPY_B1, COPY_B2, COPY_B3,
-    COPY_B4, COPY_B5, COPY_B6, COPY_B7,
-    IF, 13, 10, PP8_5_);
-
-  STEP_BIG(
-    COPY_C0, COPY_C1, COPY_C2, COPY_C3,
-    COPY_C4, COPY_C5, COPY_C6, COPY_C7,
-    IF, 10, 25, PP8_6_);
-
-  STEP_BIG(
-    COPY_D0, COPY_D1, COPY_D2, COPY_D3,
-    COPY_D4, COPY_D5, COPY_D6, COPY_D7,
-    IF, 25,  4, PP8_0_);
-
-  hash->h4[0] = A0;
-  hash->h4[1] = A1;
-  hash->h4[2] = A2;
-  hash->h4[3] = A3;
-  hash->h4[4] = A4;
-  hash->h4[5] = A5;
-  hash->h4[6] = A6;
-  hash->h4[7] = A7;
-  hash->h4[8] = B0;
-  hash->h4[9] = B1;
-  hash->h4[10] = B2;
-  hash->h4[11] = B3;
-  hash->h4[12] = B4;
-  hash->h4[13] = B5;
-  hash->h4[14] = B6;
-  hash->h4[15] = B7;
+    hash->h4[0] = A0;
+    hash->h4[1] = A1;
+    hash->h4[2] = A2;
+    hash->h4[3] = A3;
+    hash->h4[4] = A4;
+    hash->h4[5] = A5;
+    hash->h4[6] = A6;
+    hash->h4[7] = A7;
+    hash->h4[8] = B0;
+    hash->h4[9] = B1;
+    hash->h4[10] = B2;
+    hash->h4[11] = B3;
+    hash->h4[12] = B4;
+    hash->h4[13] = B5;
+    hash->h4[14] = B6;
+    hash->h4[15] = B7;
 
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
@@ -943,33 +954,66 @@ __kernel void search10(__global hash_t* hashes, __global uint* output, const ulo
   for(int i = get_local_id(0), step = get_local_size(0); i < 256; i += step)
     AES0[i] = AES0_C[i];
 
-  uint4 W[16];
+  volatile uint4 W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11, W12, W13, W14, W15;
 
+    uint4 a, b, c, d;
+    uint4 ab; 
+    uint4 bc; 
+    uint4 cd; 
+    uint4 t1; 
+    uint4 t2; 
+    uint4 t3; 
+    uint4 abx;
+    uint4 bcx;
+    uint4 cdx;
+    uint4 tmp;
   // Precomp
-  W[0] = (uint4)(0xe7e9f5f5, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[1] = (uint4)(0x14b8a457, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[2] = (uint4)(0xdbfde1dd, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[3] = (uint4)(0x9ac2dea3, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[4] = (uint4)(0x65978b09, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[5] = (uint4)(0xa4213d7e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[6] = (uint4)(0x265f4382, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[7] = (uint4)(0x34514d9e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
-  W[12] = (uint4)(0xb134347e, 0xea6f7e7e, 0xbd7731bd, 0x8a8a1968);
-  W[13] = (uint4)(0x579f9f33, 0xfbfbfbfb, 0xfbfbfbfb, 0xefefd3c7);
-  W[14] = (uint4)(0x2cb6b661, 0x6b23b3b3, 0xcf93a7cf, 0x9d9d3751);
-  W[15] = (uint4)(0x01425eb8, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W0 = (uint4)(0xe7e9f5f5, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W1 = (uint4)(0x14b8a457, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W2 = (uint4)(0xdbfde1dd, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W3 = (uint4)(0x9ac2dea3, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W4 = (uint4)(0x65978b09, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W5 = (uint4)(0xa4213d7e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W6 = (uint4)(0x265f4382, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W7 = (uint4)(0x34514d9e, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
+  W12 = (uint4)(0xb134347e, 0xea6f7e7e, 0xbd7731bd, 0x8a8a1968);
+  W13 = (uint4)(0x579f9f33, 0xfbfbfbfb, 0xfbfbfbfb, 0xefefd3c7);
+  W14 = (uint4)(0x2cb6b661, 0x6b23b3b3, 0xcf93a7cf, 0x9d9d3751);
+  W15 = (uint4)(0x01425eb8, 0xf5e7e9f5, 0xb3b36b23, 0xb3dbe7af);
 
-  ((uint16 *)W)[2] = vload16(0, hash->h4);
+  //((uint16 *)W)[2] = vload16(0, hash->h4);
+  W8.x = hash->h4[0];
+  W8.y = hash->h4[1];
+  W8.z = hash->h4[2];
+  W8.w = hash->h4[3];
+  W9.x = hash->h4[4];
+  W9.y = hash->h4[5];
+  W9.z = hash->h4[6];
+  W9.w = hash->h4[7];
+  W10.x = hash->h4[8];
+  W10.y = hash->h4[9];
+  W10.z = hash->h4[10];
+  W10.w = hash->h4[11];
+  W11.x = hash->h4[12];
+  W11.y = hash->h4[13];
+  W11.z = hash->h4[14];
+  W11.w = hash->h4[15];
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  #pragma unroll
-	for(int x = 8; x < 12; ++x) {
-		uint4 tmp;
-		tmp = Echo_AES_Round_Small(AES0, W[x]);
-		tmp.s0 ^= x | 0x200;
-		W[x] = Echo_AES_Round_Small(AES0, tmp);
-	}
+  tmp = Echo_AES_Round_Small(AES0, W8);
+  tmp.s0 ^= 8 | 0x200;
+  W8 = Echo_AES_Round_Small(AES0, tmp);
+  tmp = Echo_AES_Round_Small(AES0, W9);
+  tmp.s0 ^= 9 | 0x200;
+  W9 = Echo_AES_Round_Small(AES0, tmp);
+  tmp = Echo_AES_Round_Small(AES0, W10);
+  tmp.s0 ^= 10 | 0x200;
+  W10 = Echo_AES_Round_Small(AES0, tmp);
+  tmp = Echo_AES_Round_Small(AES0, W11);
+  tmp.s0 ^= 11 | 0x200;
+  W11 = Echo_AES_Round_Small(AES0, tmp);
+
   BigShiftRows(W);
   BigMixColumns(W);
 
@@ -980,9 +1024,25 @@ __kernel void search10(__global hash_t* hashes, __global uint* output, const ulo
       BigMixColumns(W);
   }
 
-  #pragma unroll
-  for(int i = 0; i < 4; ++i)
-    vstore4(vload4(i, hash->h4) ^ W[i] ^ W[i + 8] ^ (uint4)(512, 0, 0, 0), i, hash->h4);
+  //#pragma unroll
+  //for(int i = 0; i < 4; ++i)
+  //  vstore4(vload4(i, hash->h4) ^ W[i] ^ W[i + 8] ^ (uint4)(512, 0, 0, 0), i, hash->h4);
+ hash->h4[0 ] = hash->h4[0]  ^ W0.x ^ W8.x  ^ 512;
+ hash->h4[1 ] = hash->h4[1]  ^ W0.y ^ W8.y  ^ 0;
+ hash->h4[2 ] = hash->h4[2]  ^ W0.z ^ W8.z  ^ 0;
+ hash->h4[3 ] = hash->h4[3]  ^ W0.w ^ W8.w  ^ 0;
+ hash->h4[4 ] = hash->h4[4]  ^ W1.x ^ W9.x  ^ 512;
+ hash->h4[5 ] = hash->h4[5]  ^ W1.y ^ W9.y  ^ 0;
+ hash->h4[6 ] = hash->h4[6]  ^ W1.z ^ W9.z  ^ 0;
+ hash->h4[7 ] = hash->h4[7]  ^ W1.w ^ W9.w  ^ 0;
+ hash->h4[8 ] = hash->h4[8]  ^ W2.x ^ W10.x ^ 512;
+ hash->h4[9 ] = hash->h4[9]  ^ W2.y ^ W10.y ^ 0;
+ hash->h4[10] = hash->h4[10] ^ W2.z ^ W10.z ^ 0;
+ hash->h4[11] = hash->h4[11] ^ W2.w ^ W10.w ^ 0;
+ hash->h4[12] = hash->h4[12] ^ W3.x ^ W11.x ^ 512;
+ hash->h4[13] = hash->h4[13] ^ W3.y ^ W11.y ^ 0;
+ hash->h4[14] = hash->h4[14] ^ W3.z ^ W11.z ^ 0;
+ hash->h4[15] = hash->h4[15] ^ W3.w ^ W11.w ^ 0;
 
   bool result = (hash->h8[3] <= target);
 
