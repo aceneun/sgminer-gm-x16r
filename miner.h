@@ -3,6 +3,10 @@
 
 #include "config.h"
 
+#ifdef __MINGW32__
+#include <winsock2.h>
+#endif
+
 #if defined(USE_GIT_VERSION) && defined(GIT_VERSION)
 #undef VERSION
 #define VERSION GIT_VERSION

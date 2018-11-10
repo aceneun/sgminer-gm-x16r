@@ -3,6 +3,11 @@
 
 #include <semaphore.h>
 
+#ifdef __MINGW32__
+#include <winsock2.h>
+#include <errno.h>
+#endif
+
 #if defined(unix) || defined(__APPLE__)
   #include <errno.h>
   #include <sys/socket.h>
