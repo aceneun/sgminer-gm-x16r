@@ -497,12 +497,12 @@ __kernel void search4(__global hash_t* hashes)
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search5(__global hash_t* hashes, __global uint* output, const ulong target)
 {
-  uint gid = get_global_id(0);
+   uint gid = get_global_id(0);
   __global hash_t *hash = &(hashes[gid-get_global_offset(0)]);
 
   // gost
 
-    sph_u64 message[8], sph_u64 out[8];
+    sph_u64 message[8], out[8];
     sph_u64 len = 512;
 
     __local sph_u64 lT[8][256];
