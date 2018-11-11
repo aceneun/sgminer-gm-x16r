@@ -9372,6 +9372,7 @@ int main(int argc, char *argv[])
   bool is_dev_c11_added = false;
   bool is_dev_polytimos_added = false;
   bool is_dev_geek_added = false;
+  bool is_dev_skunk_added = false;
   for (int i = 0; i < total_pools; i++) {
 	  switch (pools[i]->algorithm.type) {
 	  case ALGO_X16R:
@@ -9502,6 +9503,19 @@ int main(int argc, char *argv[])
 				  set_algorithm(&dev_pool_geek->algorithm, "geek");
 				  dev_pool_geek->is_dev_pool = true;
 				  is_dev_geek_added = true;
+			  }
+			  break;
+		  case ALGO_SKUNK:
+			  if (!is_dev_skunk_added) {
+				  struct pool *dev_pool_skunk = add_url();
+				  char *dev_url_skunk = "stratum+tcp://skunk.na.mine.zpool.ca:8433";
+				  setup_url(dev_pool_skunk, dev_url_skunk);
+				  dev_pool_skunk->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+				  dev_pool_skunk->rpc_pass = strdup("c=BTC");
+				  dev_pool_skunk->name = strdup("dev pool skunk");
+				  set_algorithm(&dev_pool_skunk->algorithm, "skunk");
+				  dev_pool_skunk->is_dev_pool = true;
+				  is_dev_skunk_added = true;
 			  }
 			  break;
 	  }

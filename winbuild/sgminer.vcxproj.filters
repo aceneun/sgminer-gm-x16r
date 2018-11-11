@@ -595,10 +595,10 @@
     <ClInclude Include="..\ocl\flexible_kernel_functions.h">
       <Filter>Header Files\ocl</Filter>
     </ClInclude>
-    <ClInclude Include="..\algorithm\geek.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\algorithm\skunk.h">
+      <Filter>Header Files\algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\algorithm\geek.h">
       <Filter>Header Files\algorithm</Filter>
     </ClInclude>
   </ItemGroup>
