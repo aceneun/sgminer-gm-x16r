@@ -73,9 +73,9 @@ char *curly = ":D";
 #endif
 
 #if _MSC_VER >= 1400 
-FILE _iob[] = { *stdin, *stdout, *stderr };
+FILE _iob[] = { *stdin, *stdout, *stderr, *vsprintf };
 extern "C" FILE * __cdecl __iob_func(void) { return _iob; }
-#endif 
+#endif
 
 float (*gpu_temp)(int);
 int (*gpu_engineclock)(int);

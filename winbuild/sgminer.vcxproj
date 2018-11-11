@@ -284,6 +284,7 @@
     <ClCompile Include="..\algorithm\neoscrypt.c" />
     <ClCompile Include="..\algorithm\phi.c" />
     <ClCompile Include="..\algorithm\pluck.c" />
+    <ClCompile Include="..\algorithm\skunk.c" />
     <ClCompile Include="..\algorithm\sponge.c" />
     <ClCompile Include="..\algorithm\talkcoin.c" />
     <ClCompile Include="..\algorithm\tribus.c" />
@@ -377,6 +378,7 @@
     <ClInclude Include="..\algorithm\neoscrypt.h" />
     <ClInclude Include="..\algorithm\phi.h" />
     <ClInclude Include="..\algorithm\pluck.h" />
+    <ClInclude Include="..\algorithm\skunk.h" />
     <ClInclude Include="..\algorithm\sponge.h" />
     <ClInclude Include="..\algorithm\sysendian.h" />
     <ClInclude Include="..\algorithm\talkcoin.h" />

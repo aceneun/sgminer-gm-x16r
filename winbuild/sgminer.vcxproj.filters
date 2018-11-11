@@ -302,6 +302,9 @@
     <ClCompile Include="..\algorithm\geek.c">
       <Filter>Source Files\algorithm</Filter>
     </ClCompile>
+    <ClCompile Include="..\algorithm\skunk.c">
+      <Filter>Source Files\algorithm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\adl.h">
@@ -594,6 +597,9 @@
     </ClInclude>
     <ClInclude Include="..\algorithm\geek.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\algorithm\skunk.h">
+      <Filter>Header Files\algorithm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

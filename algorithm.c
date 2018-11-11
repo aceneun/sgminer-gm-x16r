@@ -54,6 +54,7 @@
 #include "algorithm/lyra2Z.h"
 #include "algorithm/polytimos.h"
 #include "algorithm/geek.h"
+#include "algorithm/skunk.h"
 
 #include "compat.h"
 
@@ -97,7 +98,8 @@ const char *algorithm_type_str[] = {
   "Cryptonight",
   "Equihash",
   "Polytimos",
-  "Geek"
+  "Geek",
+  "Skunk"
 };
 
 void sha256(const unsigned char *message, unsigned int len, unsigned char *digest)
@@ -1349,6 +1351,37 @@ static cl_int queue_polytimos_kernel(struct __clState *clState, struct _dev_blk_
   return status;
 }
 
+static cl_int queue_skunk_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	cl_kernel *kernel;
+	unsigned int num;
+	cl_ulong le_target;
+	cl_int status = 0;
+
+	le_target = *(cl_ulong *)(blk->work->device_target + 24);
+	flip80(clState->cldata, blk->work->data);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+	status |= clEnqueueWriteBuffer(clState->commandQueue, clState->MidstateBuf, true, 0, sizeof(cl_ulong) * 8, blk->work->midstate, 0, NULL, NULL);
+	// skein search()
+	kernel = &clState->kernel;
+	num = 0;
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->MidstateBuf);
+	CL_SET_ARG(clState->padbuffer8);
+	// cubehash search1()
+	kernel = clState->extra_kernels;
+	CL_SET_ARG_0(clState->padbuffer8);
+	// fugue search2()
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// gost/streebog search3()
+	num = 0;
+	CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+
+	return status;
+}
+
 static cl_int enqueue_x16r_kernels(struct __clState *clState,
                                    size_t *p_global_work_offset, size_t *globalThreads, size_t *localThreads)
 {
@@ -2032,6 +2065,7 @@ static algorithm_settings_t algos[] = {
   { "xevan", ALGO_XEVAN, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 33, 8 * 16 * 4194304, 0, xevan_regenhash, NULL, NULL, queue_xevan_kernel, gen_hash, append_x13_compiler_options },
   { "phi", ALGO_PHI, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, phi_regenhash, phi_midstate, phi_prepare_work, queue_phi_kernel, gen_hash, append_x11_compiler_options },
   { "tribus", ALGO_TRIBUS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 2, 8 * 16 * 4194304, 0, tribus_regenhash, NULL, precalc_hash_tribus, queue_tribus_kernel, gen_hash, append_x11_compiler_options, NULL},
+  { "skunk", ALGO_SKUNK, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 3, 8 * 16 * 4194304, 0, skunk_regenhash, skunk_midstate, skunk_prepare_work, queue_skunk_kernel, gen_hash, append_x11_compiler_options },
   { "aergo", ALGO_AERGO, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 27, 8 * 16 * 4194304, 0, aergo_regenhash, NULL, NULL, queue_aergo_kernel, gen_hash, append_x13_compiler_options },
   { "c11", ALGO_C11, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10,  8 * 16 * 4194304, 0, c11_regenhash, NULL, NULL, queue_c11_kernel, gen_hash, append_x11_compiler_options},
   { "polytimos", ALGO_POLYTIMOS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, polytimos_regenhash, NULL, NULL, queue_polytimos_kernel, gen_hash, append_x11_compiler_options },
