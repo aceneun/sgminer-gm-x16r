@@ -8396,6 +8396,7 @@ __constant static const sph_u32 T512[64][16] = {
     mD = 0; \
     mE = 0; \
     mF = 0; \
+	_Pragma("unroll") \
     for (u = 0; u < 8; u ++) { \
       unsigned db = buf(u); \
       for (v = 0; v < 8; v ++) { \
