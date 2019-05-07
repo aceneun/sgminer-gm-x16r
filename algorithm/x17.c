@@ -98,7 +98,7 @@ void init_X17hash_contexts()
     sph_haval256_5_init(&base_contexts.haval1);
 }
 
-inline void x17hash(void *state, const void *input)
+void x17hash(void *state, const void *input)
 {
     init_X17hash_contexts();
 
