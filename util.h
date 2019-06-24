@@ -3,6 +3,11 @@
 
 #include <semaphore.h>
 
+#ifdef __MINGW32__
+#include <winsock2.h>
+#include <errno.h>
+#endif
+
 #if defined(unix) || defined(__APPLE__)
   #include <errno.h>
   #include <sys/socket.h>
@@ -133,7 +138,6 @@ int ms_tdiff(struct timeval *end, struct timeval *start);
 double tdiff(struct timeval *end, struct timeval *start);
 bool stratum_send(struct pool *pool, char *s, ssize_t len);
 bool sock_full(struct pool *pool);
-bool sock_keepalived(struct pool *pool, const char *rpc2_id, int work_id);
 char *recv_line(struct pool *pool);
 bool parse_method(struct pool *pool, char *s);
 bool parse_notify_cn(struct pool *pool, json_t *val);

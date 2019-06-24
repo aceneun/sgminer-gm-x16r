@@ -35,15 +35,6 @@
 
 static const uint32_t diff1targ = 0x0000ffff;
 
-static inline void
-be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
-{
-	uint32_t i;
-
-	for (i = 0; i < len; i++)
-		dst[i] = htobe32(src[i]);
-}
-
 /* Used externally as confirmation of correct OCL code */
 int yescrypt_test(unsigned char *pdata, const unsigned char *ptarget, uint32_t nonce)
 {

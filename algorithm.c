@@ -29,6 +29,8 @@
 #include "algorithm/talkcoin.h"
 #include "algorithm/bitblock.h"
 #include "algorithm/x14.h"
+#include "algorithm/x16r.h"
+#include "algorithm/x16s.h"
 #include "algorithm/fresh.h"
 #include "algorithm/whirlcoin.h"
 #include "algorithm/neoscrypt.h"
@@ -43,6 +45,16 @@
 #include "algorithm/ethash.h"
 #include "algorithm/cryptonight.h"
 #include "algorithm/equihash.h"
+#include "algorithm/x17.h"
+#include "algorithm/xevan.h"
+#include "algorithm/phi.h"
+#include "algorithm/tribus.h"
+#include "algorithm/aergo.h"
+#include "algorithm/c11.h"
+#include "algorithm/lyra2Z.h"
+#include "algorithm/polytimos.h"
+#include "algorithm/geek.h"
+#include "algorithm/skunk.h"
 
 #include "compat.h"
 
@@ -58,6 +70,13 @@ const char *algorithm_type_str[] = {
   "X13",
   "X14",
   "X15",
+  "X16R",
+  "X16S",
+  "X17",
+  "Phi1612",
+  "Xevan",
+  "Lyra2Z",
+  "Tribus",
   "Keccak",
   "Quarkcoin",
   "Twecoin",
@@ -77,7 +96,10 @@ const char *algorithm_type_str[] = {
   "Vanilla",
   "Ethash",
   "Cryptonight",
-  "Equihash"
+  "Equihash",
+  "Polytimos",
+  "Geek",
+  "Skunk"
 };
 
 void sha256(const unsigned char *message, unsigned int len, unsigned char *digest)
@@ -99,6 +121,19 @@ void gen_hash(const unsigned char *data, unsigned int len, unsigned char *hash)
   sph_sha256_close(&ctx_sha2, hash1);
   sph_sha256(&ctx_sha2, hash1, 32);
   sph_sha256_close(&ctx_sha2, hash);
+}
+
+void sha256d_midstate(struct work *work)
+{
+	unsigned char data[64];
+	uint32_t *data32 = (uint32_t *)data;
+	sph_sha256_context ctx;
+
+	flip64(data32, work->data);
+	sph_sha256_init(&ctx);
+	sph_sha256(&ctx, data, 64);
+	memcpy(work->midstate, ctx.val, 32);
+	endian_flip32(work->midstate, work->midstate);
 }
 
 #define CL_SET_BLKARG(blkvar) status |= clSetKernelArg(*kernel, num++, sizeof(uint), (void *)&blk->blkvar)
@@ -721,6 +756,707 @@ static cl_int queue_x14_old_kernel(struct __clState *clState, struct _dev_blk_ct
   return status;
 }
 
+static cl_int queue_xevan_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+  cl_kernel *kernel;
+  unsigned int num;
+  cl_ulong le_target;
+  cl_int status = 0;
+
+  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  flip80(clState->cldata, blk->work->data);
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+
+  // blake - search
+  kernel = &clState->kernel;
+  num = 0;
+  CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(clState->padbuffer8);
+  // bmw - search1
+  kernel = clState->extra_kernels;
+  CL_SET_ARG_0(clState->padbuffer8);
+  // groestl - search2
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // skein - search3
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // jh - search4
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // keccak - search5
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // luffa - search6
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // cubehash - search7
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shavite - search8
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // simd - search9
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // echo - search10
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // hamsi - search11
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // fugue - search12
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shabal - search13
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // whirlpool - search14
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // sha - search15
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // haval - search16
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // blake - search17
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // bmw - search18
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // groestl - search19
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // skein - search20
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // jh - search21
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // keccak - search22
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // luffa - search23
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // cubehash - search24
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shavite - search25
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // simd - search26
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // echo - search27
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // hamsi - search28
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // fugue - search29
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shabal - search30
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // whirlpool - search31
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // sha - search32
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // haval - search33
+  num = 0;
+  CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+  CL_SET_ARG(clState->outputBuffer);
+  CL_SET_ARG(le_target);
+
+  return status;
+}
+
+static cl_int queue_aergo_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	cl_kernel *kernel;
+	unsigned int num;
+	cl_ulong le_target;
+	cl_int status = 0;
+
+	le_target = *(cl_ulong *)(blk->work->device_target + 24);
+	flip80(clState->cldata, blk->work->data);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+
+	// echo - search
+	kernel = &clState->kernel;
+	num = 0;
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->padbuffer8);
+	// simd  - search1
+	kernel = clState->extra_kernels;
+	CL_SET_ARG_0(clState->padbuffer8);
+	// blake - search2
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// bmw - search3
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// whirlpool - search4
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// groestl - search5
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// gost - search6
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// skein - search7
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// bmw - search8
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// jh - search9
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// luffa - search10
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// keccak - search11
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// gost - search12
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// cubehash - search13
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// echo - search14
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// simd - search15
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// hamsi - search16
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// fugue - search17
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// shavite - search18
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// shabal - search19
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// haval - search20
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// shavite - search21
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// gost - search22
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// echo - search23
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// blake - search24
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// jh - search25
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// cubehash - search26
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// simd - search27
+	num = 0;
+	CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+
+	return status;
+}
+
+static cl_int queue_phi_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	cl_kernel *kernel;
+	unsigned int num;
+	cl_ulong le_target;
+	cl_int status = 0;
+
+	le_target = *(cl_ulong *)(blk->work->device_target + 24);
+	flip80(clState->cldata, blk->work->data);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+	status |= clEnqueueWriteBuffer(clState->commandQueue, clState->MidstateBuf, true, 0, sizeof(cl_ulong) * 8, blk->work->midstate, 0, NULL, NULL);
+
+	// skein - search
+	kernel = &clState->kernel;
+	num = 0;
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->MidstateBuf);
+	CL_SET_ARG(clState->padbuffer8);
+	// jh - search1
+	kernel = clState->extra_kernels;
+	CL_SET_ARG_0(clState->padbuffer8);
+	// cubehash - search2
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// fugue - search3
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// gost - search4
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// echo - search5
+	num = 0;
+	CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+
+	return status;
+}
+
+static cl_int queue_lyra2z_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	cl_kernel *kernel;
+	unsigned int num;
+	cl_int status = 0;
+	cl_ulong le_target;
+
+	//  le_target = *(cl_uint *)(blk->work->device_target + 28);
+	le_target = *(cl_ulong *)(blk->work->device_target + 24);
+	flip80(clState->cldata, blk->work->data);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+
+	// blake - search
+	kernel = &clState->kernel;
+	num = 0;
+	//  CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->buffer1);
+	CL_SET_ARG(blk->work->blk.ctx_a);
+	CL_SET_ARG(blk->work->blk.ctx_b);
+	CL_SET_ARG(blk->work->blk.ctx_c);
+	CL_SET_ARG(blk->work->blk.ctx_d);
+	CL_SET_ARG(blk->work->blk.ctx_e);
+	CL_SET_ARG(blk->work->blk.ctx_f);
+	CL_SET_ARG(blk->work->blk.ctx_g);
+	CL_SET_ARG(blk->work->blk.ctx_h);
+	CL_SET_ARG(blk->work->blk.cty_a);
+	CL_SET_ARG(blk->work->blk.cty_b);
+	CL_SET_ARG(blk->work->blk.cty_c);
+	num = 0;
+	// keccak - search1
+	kernel = clState->extra_kernels;
+	CL_SET_ARG(clState->buffer1);
+	CL_SET_ARG(clState->Scratchpads);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+	
+	return status;
+}
+
+void initialize_lyra2Z_kernel(_clState *clState, size_t scan_size) {
+	/*cl_int status;
+	// cl_int blockbuff = already initialized in buff0
+	const size_t buf1size = scan_size * sizeof(unsigned long long) * 4;
+	const size_t big_size = scan_size * sizeof(unsigned long long) * 12 * 4 * 4; // a matrix 3 rows 4 columns, 4 of them per hyper, 4 hypers
+	clState->buffer1 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, buf1size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (hash passing betwee stages); very unlikely to happen, system overloaded?", status);
+	}
+	clState->padbuffer8 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, big_size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (big pad); most likely scan size too big!", status);
+	}*/
+	cl_int status;
+	/*const size_t buf1size = scan_size * sizeof(unsigned long long) * 16;
+	const size_t big_size = scan_size * sizeof(unsigned long long) * LYRA2Z_SCRATCHBUF_SIZE;*/
+	clState->buffer1 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, 16 * 8 * scan_size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (hash passing betwee stages); very unlikely to happen, system overloaded?", status);
+	}
+
+
+	clState->Scratchpads = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, sizeof(cl_ulong)*LYRA2Z_SCRATCHBUF_SIZE * scan_size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (big pad); most likely scan size too big!", status);
+	}
+}
+
+
+cl_int truly_enqueue_lyra2Z_kernel(struct __clState *clState, size_t start, size_t scan, size_t local_size) {
+	cl_int status = 0;
+	cl_command_queue que = clState->commandQueue;
+	const size_t off2[] = { 0, start };
+	const size_t gws[] = { 4, scan };
+	const size_t local_work_size = 256;
+	const size_t mangle[] = { 4, 8 };
+	status |= clEnqueueNDRangeKernel(que, clState->kernel, 1, &start, &scan, &local_work_size, 0, NULL, NULL); // blake
+	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[0], 1, &start, &scan, &local_size, 0, NULL, NULL); // lyra2
+	return status;
+}
+
+static cl_int queue_geek_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	cl_kernel *kernel;
+	unsigned int num;
+	cl_ulong le_target;
+	cl_int status = 0;
+
+	le_target = *(cl_ulong *)(blk->work->device_target + 24);
+	flip80(clState->cldata, blk->work->data);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+
+	// blake - search
+	kernel = &clState->kernel;
+	num = 0;
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->padbuffer8);
+	// bmw - search1
+	kernel = clState->extra_kernels;
+	CL_SET_ARG_0(clState->padbuffer8);
+	// echo - search2
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// shaba - search3
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// groestl - search4
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// cubehash - search5
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// keccak - search6
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// hamsi - search7
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// simd - search8
+	num = 0;
+	CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+
+	return status;
+}
+
+extern char *bytearray2hex(const uint8_t *p, size_t len);
+extern bool bytearray_eq(const uint8_t *x, const uint8_t *y, size_t len);
+
+static cl_int queue_x16r_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+  cl_kernel *kernel;
+  unsigned int num;
+  cl_ulong le_target;
+  cl_int status = 0;
+  uint8_t hashOrder[X16R_HASH_FUNC_COUNT];
+
+  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  flip80(clState->cldata, blk->work->data);
+  if (opt_benchmark) {
+    for (size_t i = 0; i < X16R_HASH_FUNC_COUNT; i++)
+      hashOrder[i] = opt_benchmark_seq[i];
+  }
+  else {
+    x16r_getalgolist(&clState->cldata[4], (char*) hashOrder);
+  }
+
+  if (!bytearray_eq((uint8_t*) clState->hash_order, hashOrder, X16R_HASH_FUNC_COUNT)) {
+    for (size_t i = 0; i < X16R_HASH_FUNC_COUNT; i++)
+      clState->hash_order[i] = hashOrder[i];
+    if (!blk->work->thr_id) {
+      char *s = bytearray2hex(hashOrder, X16R_HASH_FUNC_COUNT);
+      applog(LOG_NOTICE, "hash order %s", s);
+      free(s);
+    }
+  }
+
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+  if (status != CL_SUCCESS)
+    return -1;
+
+  for (int i = 0; i < X16R_HASH_FUNC_COUNT; i++) {
+    kernel = &clState->extra_kernels[2*i];
+    CL_SET_ARG_0(clState->padbuffer8);
+  }
+
+  kernel = &clState->extra_kernels[2*hashOrder[0]+1];
+  num = 0;
+  CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(clState->padbuffer8);
+
+  kernel = &clState->kernel;
+  num = 0;
+  CL_SET_ARG(clState->padbuffer8);
+  CL_SET_ARG(clState->outputBuffer);
+  CL_SET_ARG(le_target);
+
+  return status;
+}
+
+static cl_int queue_x16s_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+  cl_kernel *kernel;
+  unsigned int num;
+  cl_ulong le_target;
+  cl_int status = 0;
+  uint8_t hashOrder[X16S_HASH_FUNC_COUNT];
+
+  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  flip80(clState->cldata, blk->work->data);
+  if (opt_benchmark) {
+    for (size_t i = 0; i < X16S_HASH_FUNC_COUNT; i++)
+      hashOrder[i] = opt_benchmark_seq[i];
+  }
+  else {
+    x16s_getalgolist(&clState->cldata[4], hashOrder);
+  }
+
+  if (!bytearray_eq((uint8_t*) clState->hash_order, hashOrder, X16S_HASH_FUNC_COUNT)) {
+    for (size_t i = 0; i < X16S_HASH_FUNC_COUNT; i++)
+      clState->hash_order[i] = hashOrder[i];
+    if (!blk->work->thr_id) {
+      char *s = bytearray2hex(hashOrder, X16S_HASH_FUNC_COUNT);
+      applog(LOG_NOTICE, "hash order %s", s);
+      free(s);
+    }
+  }
+
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+  if (status != CL_SUCCESS)
+    return -1;
+
+  for (int i = 0; i < X16S_HASH_FUNC_COUNT; i++) {
+    kernel = &clState->extra_kernels[2*i];
+    CL_SET_ARG_0(clState->padbuffer8);
+  }
+
+  kernel = &clState->extra_kernels[2*hashOrder[0]+1];
+  num = 0;
+  CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(clState->padbuffer8);
+
+  kernel = &clState->kernel;
+  num = 0;
+  CL_SET_ARG(clState->padbuffer8);
+  CL_SET_ARG(clState->outputBuffer);
+  CL_SET_ARG(le_target);
+
+  return status;
+}
+
+static cl_int queue_x17_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+  cl_kernel *kernel;
+  unsigned int num;
+  cl_ulong le_target;
+  cl_int status = 0;
+
+  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  flip80(clState->cldata, blk->work->data);
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
+
+  // blake - search
+  kernel = &clState->kernel;
+  num = 0;
+  CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(clState->padbuffer8);
+  // bmw - search1
+  kernel = clState->extra_kernels;
+  CL_SET_ARG_0(clState->padbuffer8);
+  // groestl - search2
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // skein - search3
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // jh - search4
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // keccak - search5
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // luffa - search6
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // cubehash - search7
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shavite - search8
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // simd - search9
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // echo - search10
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // hamsi - search11
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // fugue - search12
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shabal - search13
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // whirlpool - search14
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // sha - search15
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // haval - search16
+  num = 0;
+  CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+  CL_SET_ARG(clState->outputBuffer);
+  CL_SET_ARG(le_target);
+
+  return status;
+}
+
+static cl_int queue_tribus_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	uint32_t *midstate = (uint32_t*)(&blk->work->midstate); // 128 bytes
+	uint32_t * data_end = (uint32_t*)(&blk->work->data[64]); //  16 bytes (end of data)
+	cl_kernel *kernel;
+	unsigned int num;
+	cl_ulong le_target;
+	cl_int status = 0;
+
+	le_target = *(cl_ulong *)(blk->work->device_target + 24);
+	memcpy(clState->cldata, blk->work->midstate, 128);
+	for (int i = 0; i < 3; i++)
+	((uint32_t*)clState->cldata)[32 + i] = swab32(data_end[i]);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 128 + 16, clState->cldata, 0, NULL, NULL);
+
+	// jh - search
+	kernel = &clState->kernel;
+	num = 0;
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->padbuffer8);
+	// keccak - search1
+	kernel = clState->extra_kernels;
+	CL_SET_ARG_0(clState->padbuffer8);
+	// echo - search2
+	num = 0;
+	CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+
+	return status;
+}
+
+static cl_int queue_c11_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+  cl_kernel *kernel;
+  unsigned int num;
+  cl_ulong le_target;
+  cl_int status = 0;
+
+  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  flip80(clState->cldata, blk->work->data);
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL,NULL);
+
+  // blake - search
+  kernel = &clState->kernel;
+  num = 0;
+  CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(clState->padbuffer8);
+  // bmw - search1
+  kernel = clState->extra_kernels;
+  CL_SET_ARG_0(clState->padbuffer8);
+  // groestl - search2
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // jh - search3
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // keccak - search4
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // skein - search5
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // luffa - search6
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // cubehash - search7
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // shavite - search8
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // simd - search9
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // echo - search10
+  num = 0;
+  CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+  CL_SET_ARG(clState->outputBuffer);
+  CL_SET_ARG(le_target);
+
+  return status;
+}
+
+static cl_int queue_polytimos_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+  cl_kernel *kernel;
+  unsigned int num;
+  cl_ulong le_target;
+  cl_int status = 0;
+
+  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  flip80(clState->cldata, blk->work->data);
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+  // skein search()
+  kernel = &clState->kernel;
+  num = 0;
+  CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(clState->padbuffer8);
+  // shabal search1()
+  kernel = clState->extra_kernels;
+  CL_SET_ARG_0(clState->padbuffer8);
+  // echo search2()
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // luffa search3()
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+  // fugue search4()
+  CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+
+  // gost/streebog search5()
+  num = 0;
+  CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+  CL_SET_ARG(clState->outputBuffer);
+  CL_SET_ARG(le_target);
+
+  return status;
+}
+
+static cl_int queue_skunk_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+	cl_kernel *kernel;
+	unsigned int num;
+	cl_ulong le_target;
+	cl_int status = 0;
+
+	le_target = *(cl_ulong *)(blk->work->device_target + 24);
+	flip80(clState->cldata, blk->work->data);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+	status |= clEnqueueWriteBuffer(clState->commandQueue, clState->MidstateBuf, true, 0, sizeof(cl_ulong) * 8, blk->work->midstate, 0, NULL, NULL);
+	// skein search()
+	kernel = &clState->kernel;
+	num = 0;
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(clState->MidstateBuf);
+	CL_SET_ARG(clState->padbuffer8);
+	// cubehash search1()
+	kernel = clState->extra_kernels;
+	CL_SET_ARG_0(clState->padbuffer8);
+	// fugue search2()
+	CL_NEXTKERNEL_SET_ARG_0(clState->padbuffer8);
+	// gost/streebog search3()
+	num = 0;
+	CL_NEXTKERNEL_SET_ARG(clState->padbuffer8);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
+
+	return status;
+}
+
+static cl_int enqueue_x16r_kernels(struct __clState *clState,
+                                   size_t *p_global_work_offset, size_t *globalThreads, size_t *localThreads)
+{
+  cl_int status;
+
+  status = clEnqueueNDRangeKernel(clState->commandQueue,
+      clState->extra_kernels[2*clState->hash_order[0]+1],
+      1, p_global_work_offset,
+      globalThreads, localThreads, 0, NULL, NULL);
+  if (unlikely(status != CL_SUCCESS)) {
+    applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+    return status;
+  }
+
+  for (int i = 1; i < X16R_HASH_FUNC_COUNT; i++) {
+    status = clEnqueueNDRangeKernel(clState->commandQueue,
+        clState->extra_kernels[2*clState->hash_order[i]],
+        1, p_global_work_offset,
+        globalThreads, localThreads, 0, NULL, NULL);
+    if (unlikely(status != CL_SUCCESS)) {
+      applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+      return status;
+    }
+  }
+
+  status = clEnqueueNDRangeKernel(clState->commandQueue,
+      clState->kernel,
+      1, p_global_work_offset,
+      globalThreads, localThreads, 0, NULL, NULL);
+  if (unlikely(status != CL_SUCCESS)) {
+    applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+    return status;
+  }
+
+  return 0;
+}
+
+static cl_int enqueue_x16s_kernels(struct __clState *clState,
+                                   size_t *p_global_work_offset, size_t *globalThreads, size_t *localThreads)
+{
+  cl_int status;
+
+  status = clEnqueueNDRangeKernel(clState->commandQueue,
+      clState->extra_kernels[2*clState->hash_order[0]+1],
+      1, p_global_work_offset,
+      globalThreads, localThreads, 0, NULL, NULL);
+  if (unlikely(status != CL_SUCCESS)) {
+    applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+    return status;
+  }
+
+  for (int i = 1; i < X16S_HASH_FUNC_COUNT; i++) {
+    status = clEnqueueNDRangeKernel(clState->commandQueue,
+        clState->extra_kernels[2*clState->hash_order[i]],
+        1, p_global_work_offset,
+        globalThreads, localThreads, 0, NULL, NULL);
+    if (unlikely(status != CL_SUCCESS)) {
+      applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+      return status;
+    }
+  }
+
+  status = clEnqueueNDRangeKernel(clState->commandQueue,
+      clState->kernel,
+      1, p_global_work_offset,
+      globalThreads, localThreads, 0, NULL, NULL);
+  if (unlikely(status != CL_SUCCESS)) {
+    applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+    return status;
+  }
+
+  return 0;
+}
+
+
 static cl_int queue_fresh_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
   cl_kernel *kernel;
@@ -915,6 +1651,39 @@ static cl_int queue_lyra2rev2_kernel(struct __clState *clState, struct _dev_blk_
   return status;
 }
 
+void initialize_lyra2rev2_mdz(_clState *clState, size_t scan_size) {
+	cl_int status;
+	// cl_int blockbuff = already initialized in buff0
+	const size_t buf1size = scan_size * sizeof(unsigned long long) * 4;
+	const size_t big_size = scan_size * sizeof(unsigned long long) * 12 * 4 * 4; // a matrix 3 rows 4 columns, 4 of them per hyper, 4 hypers
+	clState->buffer1 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, buf1size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (hash passing betwee stages); very unlikely to happen, system overloaded?", status);
+	}
+	clState->padbuffer8 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, big_size, NULL, &status);
+	if (status != CL_SUCCESS) { // Failing to allocate is really a fatal. You cannot go anywhere with it and no point in even trying to go on.
+		quit(1, "Error %d: clCreateBuffer (big pad); most likely scan size too big!", status);
+	}
+}
+
+
+cl_int truly_enqueue_lyra2rev2_mdz_kernel(struct __clState *clState, size_t start, size_t scan, size_t local_size) {
+	cl_int status = 0;
+	cl_command_queue que = clState->commandQueue;
+	const size_t off2[] = { 0, start };
+	const size_t gws[] = { 4, scan };
+	const size_t expand[] = { 4, 16 };
+	const size_t mangle[] = { 4, 8 };
+	status |= clEnqueueNDRangeKernel(que, clState->kernel, 1, &start, &scan, &local_size, 0, NULL, NULL); // blake
+	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[0], 1, &start, &scan, &local_size, 0, NULL, NULL); // keccak
+	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[1], 1, &start, &scan, &local_size, 0, NULL, NULL); // cubehash
+	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[2], 2, off2, gws, expand, 0, NULL, NULL); // lyra 4w monolithic
+	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[3], 1, &start, &scan, &local_size, 0, NULL, NULL); // skein
+	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[4], 1, &start, &scan, &local_size, 0, NULL, NULL); // cubehash again
+	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[5], 1, &start, &scan, &local_size, 0, NULL, NULL); // blue midnight wish
+	return status;
+}
+
 static cl_int queue_pluck_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
   cl_kernel *kernel = &clState->kernel;
@@ -1040,7 +1809,7 @@ static cl_int queue_ethash_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 
     cl_ulong DAGSize = EthGetDAGSize(blk->work->eth_epoch);
     size_t DAGItems = (size_t) (DAGSize / 64);
-    cgsleep_ms(128 * blk->work->thr->cgpu->device_id); 
+    cgsleep_ms(128 * blk->work->thr->cgpu->device_id);
     status |= clEnqueueNDRangeKernel(clState->commandQueue, clState->GenerateDAG, 1, NULL, &DAGItems, NULL, 0, NULL, NULL);
     clFinish(clState->commandQueue);
 
@@ -1071,7 +1840,7 @@ static cl_int queue_ethash_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 
   // DO NOT flip80.
   status |= clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, CL_FALSE, 0, 32, blk->work->data, 0, NULL, NULL);
-  
+
   CL_SET_ARG(clState->outputBuffer);
   CL_SET_ARG(clState->CLbuffer0);
   CL_SET_ARG(dag->dag_buffer);
@@ -1086,7 +1855,7 @@ static cl_int queue_ethash_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_u
 }
 
 static void append_equihash_compiler_options(struct _build_kernel_data *data, struct cgpu_info *cgpu, struct _algorithm_t *algorithm)
-{  
+{
   strcat(data->compiler_options, "");
 }
 
@@ -1102,7 +1871,8 @@ static cl_int queue_cryptonight_kernel(_clState *clState, dev_blk_ctx *blk, __ma
     char kernel_name[20] = "search1";
     if (variant > 0)
       snprintf(kernel_name + 7, sizeof(kernel_name) - 7, "_var%d", variant);
-    clReleaseKernel(clState->extra_kernels[0]);
+
+	clReleaseKernel(clState->extra_kernels[0]);
     clState->extra_kernels[0] = clCreateKernel(clState->program, kernel_name, &status);
     if (status != CL_SUCCESS) {
       applog(LOG_ERR, "Error %d: Creating Kernel \"%s\" from program. (clCreateKernel)", kernel_name, status);
@@ -1112,19 +1882,21 @@ static cl_int queue_cryptonight_kernel(_clState *clState, dev_blk_ctx *blk, __ma
   }
 
   memcpy(clState->cldata, blk->work->data, blk->work->XMRBlobLen);
-  
+
   status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, CL_FALSE, 0, blk->work->XMRBlobLen, clState->cldata , 0, NULL, NULL);
-  
+
   CL_SET_ARG(clState->CLbuffer0);
   CL_SET_ARG(blk->work->XMRBlobLen);
   CL_SET_ARG(clState->Scratchpads);
   CL_SET_ARG(clState->States);
-  
+
   num = 0;
   kernel = clState->extra_kernels;
   CL_SET_ARG(clState->Scratchpads);
   CL_SET_ARG(clState->States);
-  
+  if (variant > 0)
+	  CL_SET_ARG(*(cl_uint*)(clState->cldata + 35));
+
   num = 0;
   CL_NEXTKERNEL_SET_ARG(clState->Scratchpads);
   CL_SET_ARG(clState->States);
@@ -1132,35 +1904,35 @@ static cl_int queue_cryptonight_kernel(_clState *clState, dev_blk_ctx *blk, __ma
   CL_SET_ARG(clState->BranchBuffer[1]);
   CL_SET_ARG(clState->BranchBuffer[2]);
   CL_SET_ARG(clState->BranchBuffer[3]);
-  
+
   num = 0;
   CL_NEXTKERNEL_SET_ARG(clState->States);
   CL_SET_ARG(clState->BranchBuffer[0]);
   CL_SET_ARG(clState->outputBuffer);
   CL_SET_ARG(tgt32);
-  
+
   // last to be set in driver-opencl.c
-  
+
   num = 0;
   CL_NEXTKERNEL_SET_ARG(clState->States);
   CL_SET_ARG(clState->BranchBuffer[1]);
   CL_SET_ARG(clState->outputBuffer);
   CL_SET_ARG(tgt32);
-  
-  
+
+
   num = 0;
   CL_NEXTKERNEL_SET_ARG(clState->States);
   CL_SET_ARG(clState->BranchBuffer[2]);
   CL_SET_ARG(clState->outputBuffer);
   CL_SET_ARG(tgt32);
-  
-  
+
+
   num = 0;
   CL_NEXTKERNEL_SET_ARG(clState->States);
   CL_SET_ARG(clState->BranchBuffer[3]);
   CL_SET_ARG(clState->outputBuffer);
   CL_SET_ARG(tgt32);
-  
+
   return(status);
 }
 
@@ -1178,7 +1950,7 @@ static cl_int queue_equihash_kernel(_clState *clState, dev_blk_ctx *blk, __maybe
   status = clEnqueueWriteBuffer(clState->commandQueue, clState->MidstateBuf, CL_TRUE, 0, sizeof(mid_hash), mid_hash, 0, NULL, NULL);
   uint32_t dbg[2] = {0};
   status |= clEnqueueWriteBuffer(clState->commandQueue, clState->padbuffer8, CL_TRUE, 0, sizeof(dbg), &dbg, 0, NULL, NULL);
-  
+
   cl_mem rowCounters[2] = {clState->buffer2, clState->buffer3};
   for (int round = 0; round < PARAM_K; round++) {
     size_t global_ws = RC_SIZE;
@@ -1191,7 +1963,7 @@ static cl_int queue_equihash_kernel(_clState *clState, dev_blk_ctx *blk, __maybe
     CL_SET_ARG(clState->outputBuffer);
     CL_SET_ARG(clState->CLbuffer0);
     status |= clEnqueueNDRangeKernel(clState->commandQueue, *kernel, 1, NULL, &global_ws, &local_ws, 0, NULL, NULL);
-    
+
     kernel = &clState->extra_kernels[1 + round];
     if (!round) {
       worksize = LOCAL_WORK_SIZE_ROUND0;
@@ -1206,12 +1978,12 @@ static cl_int queue_equihash_kernel(_clState *clState, dev_blk_ctx *blk, __maybe
 
   worksize = LOCAL_WORK_SIZE_POTENTIAL_SOLS;
   work_items = NR_ROWS * worksize;
-  status |= clEnqueueNDRangeKernel(clState->commandQueue, clState->extra_kernels[1 + 9], 1, NULL, &work_items, &worksize, 0, NULL, NULL); 
+  status |= clEnqueueNDRangeKernel(clState->commandQueue, clState->extra_kernels[1 + 9], 1, NULL, &work_items, &worksize, 0, NULL, NULL);
 
   worksize = LOCAL_WORK_SIZE_SOLS;
   work_items = MAX_POTENTIAL_SOLS * worksize;
   status |= clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel, 1, NULL, &work_items, &worksize, 0, NULL, NULL);
- 
+
   return status;
 }
 #undef WORKSIZE
@@ -1220,7 +1992,7 @@ static cl_int queue_equihash_kernel(_clState *clState, dev_blk_ctx *blk, __maybe
 static algorithm_settings_t algos[] = {
   // kernels starting from this will have difficulty calculated by using litecoin algorithm
 #define A_SCRYPT(a) \
-  { a, ALGO_SCRYPT, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFFFFFFULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, scrypt_regenhash, NULL, queue_scrypt_kernel, gen_hash, append_scrypt_compiler_options }
+  { a, ALGO_SCRYPT, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFFFFFFULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, scrypt_regenhash, NULL, NULL, queue_scrypt_kernel, gen_hash, append_scrypt_compiler_options }
   A_SCRYPT("ckolivas"),
   A_SCRYPT("alexkarnew"),
   A_SCRYPT("alexkarnold"),
@@ -1231,33 +2003,33 @@ static algorithm_settings_t algos[] = {
 #undef A_SCRYPT
 
 #define A_NEOSCRYPT(a) \
-  { a, ALGO_NEOSCRYPT, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, neoscrypt_regenhash, NULL, queue_neoscrypt_kernel, gen_hash, append_neoscrypt_compiler_options }
+  { a, ALGO_NEOSCRYPT, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, neoscrypt_regenhash, NULL, NULL, queue_neoscrypt_kernel, gen_hash, append_neoscrypt_compiler_options }
   A_NEOSCRYPT("neoscrypt"),
 #undef A_NEOSCRYPT
 
 #define A_PLUCK(a) \
-  { a, ALGO_PLUCK, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, pluck_regenhash, NULL, queue_pluck_kernel, gen_hash, append_neoscrypt_compiler_options }
+  { a, ALGO_PLUCK, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, pluck_regenhash, NULL, NULL, queue_pluck_kernel, gen_hash, append_neoscrypt_compiler_options }
   A_PLUCK("pluck"),
 #undef A_PLUCK
 
 #define A_CREDITS(a) \
-  { a, ALGO_CRE, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, credits_regenhash, NULL, queue_credits_kernel, gen_hash, NULL}
+  { a, ALGO_CRE, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, credits_regenhash, NULL, NULL, queue_credits_kernel, gen_hash, NULL}
   A_CREDITS("credits"),
 #undef A_CREDITS
 
 #define A_YESCRYPT(a) \
-  { a, ALGO_YESCRYPT, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, yescrypt_regenhash, NULL, queue_yescrypt_kernel, gen_hash, append_neoscrypt_compiler_options}
+  { a, ALGO_YESCRYPT, "", 1, 65536, 65536, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, yescrypt_regenhash, NULL, NULL, queue_yescrypt_kernel, gen_hash, append_neoscrypt_compiler_options}
   A_YESCRYPT("yescrypt"),
 #undef A_YESCRYPT
 
 #define A_YESCRYPT_MULTI(a) \
-  { a, ALGO_YESCRYPT_MULTI, "", 1, 65536, 65536, 0, 0, 0xFF, 0x00000000FFFFULL, 0x0000ffffUL, 6,-1,CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE , yescrypt_regenhash, NULL, queue_yescrypt_multikernel, gen_hash, append_neoscrypt_compiler_options}
+  { a, ALGO_YESCRYPT_MULTI, "", 1, 65536, 65536, 0, 0, 0xFF, 0x00000000FFFFULL, 0x0000ffffUL, 6,-1,CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE , yescrypt_regenhash, NULL, NULL, queue_yescrypt_multikernel, gen_hash, append_neoscrypt_compiler_options}
   A_YESCRYPT_MULTI("yescrypt-multi"),
 #undef A_YESCRYPT_MULTI
 
   // kernels starting from this will have difficulty calculated by using quarkcoin algorithm
 #define A_QUARK(a, b) \
-  { a, ALGO_QUARK, "", 256, 256, 256, 0, 0, 0xFF, 0xFFFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, b, NULL, queue_sph_kernel, gen_hash, append_x11_compiler_options }
+  { a, ALGO_QUARK, "", 256, 256, 256, 0, 0, 0xFF, 0xFFFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, b, NULL, NULL, queue_sph_kernel, gen_hash, append_x11_compiler_options }
   A_QUARK("quarkcoin", quarkcoin_regenhash),
   A_QUARK("qubitcoin", qubitcoin_regenhash),
   A_QUARK("animecoin", animecoin_regenhash),
@@ -1266,57 +2038,80 @@ static algorithm_settings_t algos[] = {
 
   // kernels starting from this will have difficulty calculated by using bitcoin algorithm
 #define A_DARK(a, b) \
-  { a, ALGO_X11, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, b, NULL, queue_sph_kernel, gen_hash, append_x11_compiler_options }
+  { a, ALGO_X11, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, b, NULL, NULL, queue_sph_kernel, gen_hash, append_x11_compiler_options }
   A_DARK("darkcoin", darkcoin_regenhash),
   A_DARK("inkcoin", inkcoin_regenhash),
   A_DARK("myriadcoin-groestl", myriadcoin_groestl_regenhash),
 #undef A_DARK
 
-  { "twecoin", ALGO_TWE, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, twecoin_regenhash, NULL, queue_sph_kernel, sha256, NULL },
-  { "maxcoin", ALGO_KECCAK, "", 1, 256, 1, 4, 15, 0x0F, 0xFFFFULL, 0x000000ffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, maxcoin_regenhash, NULL, queue_maxcoin_kernel, sha256, NULL },
+  { "twecoin", ALGO_TWE, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, twecoin_regenhash, NULL, NULL, queue_sph_kernel, sha256, NULL },
+  { "maxcoin", ALGO_KECCAK, "", 1, 256, 1, 4, 15, 0x0F, 0xFFFFULL, 0x000000ffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, maxcoin_regenhash, NULL, NULL, queue_maxcoin_kernel, sha256, NULL },
 
-  { "darkcoin-mod", ALGO_X11, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 8 * 16 * 4194304, 0, darkcoin_regenhash, NULL, queue_darkcoin_mod_kernel, gen_hash, append_x11_compiler_options },
+  { "darkcoin-mod", ALGO_X11, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 8 * 16 * 4194304, 0, darkcoin_regenhash, NULL, NULL, queue_darkcoin_mod_kernel, gen_hash, append_x11_compiler_options },
 
-  { "marucoin", ALGO_X13, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, marucoin_regenhash, NULL, queue_sph_kernel, gen_hash, append_x13_compiler_options },
-  { "marucoin-mod", ALGO_X13, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 12, 8 * 16 * 4194304, 0, marucoin_regenhash, NULL, queue_marucoin_mod_kernel, gen_hash, append_x13_compiler_options },
-  { "marucoin-modold", ALGO_X13, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 8 * 16 * 4194304, 0, marucoin_regenhash, NULL, queue_marucoin_mod_old_kernel, gen_hash, append_x13_compiler_options },
+  { "marucoin", ALGO_X13, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, marucoin_regenhash, NULL, NULL, queue_sph_kernel, gen_hash, append_x13_compiler_options },
+  { "marucoin-mod", ALGO_X13, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 12, 8 * 16 * 4194304, 0, marucoin_regenhash, NULL, NULL, queue_marucoin_mod_kernel, gen_hash, append_x13_compiler_options },
+  { "marucoin-modold", ALGO_X13, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 8 * 16 * 4194304, 0, marucoin_regenhash, NULL, NULL, queue_marucoin_mod_old_kernel, gen_hash, append_x13_compiler_options },
 
-  { "x14", ALGO_X14, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 13, 8 * 16 * 4194304, 0, x14_regenhash, NULL, queue_x14_kernel, gen_hash, append_x13_compiler_options },
-  { "x14old", ALGO_X14, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 8 * 16 * 4194304, 0, x14_regenhash, NULL, queue_x14_old_kernel, gen_hash, append_x13_compiler_options },
+  { "x14", ALGO_X14, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 13, 8 * 16 * 4194304, 0, x14_regenhash, NULL, NULL, queue_x14_kernel, gen_hash, append_x13_compiler_options },
+  { "x14old", ALGO_X14, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 8 * 16 * 4194304, 0, x14_regenhash, NULL, NULL, queue_x14_old_kernel, gen_hash, append_x13_compiler_options },
 
-  { "bitblock", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 14, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, queue_bitblock_kernel, gen_hash, append_x13_compiler_options },
-  { "bitblockold", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, queue_bitblockold_kernel, gen_hash, append_x13_compiler_options },
+  { "bitblock", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 14, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, NULL, queue_bitblock_kernel, gen_hash, append_x13_compiler_options },
+  { "bitblockold", ALGO_X15, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10, 4 * 16 * 4194304, 0, bitblock_regenhash, NULL, NULL, queue_bitblockold_kernel, gen_hash, append_x13_compiler_options },
 
-  { "talkcoin-mod", ALGO_NIST, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 8 * 16 * 4194304, 0, talkcoin_regenhash, NULL, queue_talkcoin_mod_kernel, gen_hash, append_x11_compiler_options },
+  { "x16r", ALGO_X16R, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16r_regenhash, NULL, NULL, queue_x16r_kernel, gen_hash, append_x13_compiler_options, enqueue_x16r_kernels },
+  { "x16s", ALGO_X16S, "x16", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 32, 8 * 16 * 4194304, 0, x16s_regenhash, NULL, NULL, queue_x16s_kernel, gen_hash, append_x13_compiler_options, enqueue_x16s_kernels },
+  { "x17", ALGO_X17, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 16,  8 * 16 * 4194304, 0, x17_regenhash, NULL, NULL, queue_x17_kernel, gen_hash, append_x13_compiler_options},
+  { "xevan", ALGO_XEVAN, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 33, 8 * 16 * 4194304, 0, xevan_regenhash, NULL, NULL, queue_xevan_kernel, gen_hash, append_x13_compiler_options },
+  { "phi", ALGO_PHI, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, phi_regenhash, phi_midstate, phi_prepare_work, queue_phi_kernel, gen_hash, append_x11_compiler_options },
+  { "tribus", ALGO_TRIBUS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 2, 8 * 16 * 4194304, 0, tribus_regenhash, NULL, precalc_hash_tribus, queue_tribus_kernel, gen_hash, append_x11_compiler_options, NULL},
+  { "skunk", ALGO_SKUNK, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 3, 8 * 16 * 4194304, 0, skunk_regenhash, skunk_midstate, skunk_prepare_work, queue_skunk_kernel, gen_hash, append_x11_compiler_options },
+  { "aergo", ALGO_AERGO, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x00ffffffUL, 27, 8 * 16 * 4194304, 0, aergo_regenhash, NULL, NULL, queue_aergo_kernel, gen_hash, append_x13_compiler_options },
+  { "c11", ALGO_C11, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 10,  8 * 16 * 4194304, 0, c11_regenhash, NULL, NULL, queue_c11_kernel, gen_hash, append_x11_compiler_options},
+  { "polytimos", ALGO_POLYTIMOS, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 5, 8 * 16 * 4194304, 0, polytimos_regenhash, NULL, NULL, queue_polytimos_kernel, gen_hash, append_x11_compiler_options },
+  { "geek", ALGO_GEEK, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 8, 4 * 16 * 4194304, 0, geek_regenhash, NULL, NULL, queue_geek_kernel, gen_hash, append_x13_compiler_options },
 
-  { "fresh", ALGO_FRESH, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 4 * 16 * 4194304, 0, fresh_regenhash, NULL, queue_fresh_kernel, gen_hash, NULL },
+  { "talkcoin-mod", ALGO_NIST, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 8 * 16 * 4194304, 0, talkcoin_regenhash, NULL, NULL, queue_talkcoin_mod_kernel, gen_hash, append_x11_compiler_options },
 
-  { "lyra2re", ALGO_LYRA2RE, "", 1, 128, 128, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 2 * 8 * 4194304, 0, lyra2re_regenhash, precalc_hash_blake256, queue_lyra2re_kernel, gen_hash, NULL },
-  { "lyra2rev2", ALGO_LYRA2REV2, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, lyra2rev2_regenhash, precalc_hash_blake256, queue_lyra2rev2_kernel, gen_hash, append_neoscrypt_compiler_options },
+  { "fresh", ALGO_FRESH, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 4 * 16 * 4194304, 0, fresh_regenhash, NULL, NULL, queue_fresh_kernel, gen_hash, NULL },
+
+  { "lyra2re", ALGO_LYRA2RE, "", 1, 128, 128, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 4, 2 * 8 * 4194304, 0, lyra2re_regenhash, blake256_midstate, blake256_prepare_work, queue_lyra2re_kernel, gen_hash, NULL },
+  { "lyra2rev2", ALGO_LYRA2REV2, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, lyra2rev2_regenhash, blake256_midstate, blake256_prepare_work, queue_lyra2rev2_kernel, gen_hash, append_neoscrypt_compiler_options },
+  { "lyra2Z"   , ALGO_LYRA2Z   , "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 1, 0, 0, lyra2Z_regenhash,  blake256_midstate, blake256_prepare_work, queue_lyra2z_kernel, gen_hash, append_neoscrypt_compiler_options, NULL,
+  {
+	initialize_lyra2Z_kernel,
+	truly_enqueue_lyra2Z_kernel
+  } 
+},
+  { "lyra2rev2.mdz", ALGO_LYRA2REV2, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, lyra2rev2_regenhash, blake256_midstate, blake256_prepare_work, queue_lyra2rev2_kernel, gen_hash, append_neoscrypt_compiler_options, NULL,
+{
+	initialize_lyra2rev2_mdz,
+	truly_enqueue_lyra2rev2_mdz_kernel
+} },
 
   // kernels starting from this will have difficulty calculated by using fuguecoin algorithm
 #define A_FUGUE(a, b, c) \
-  { a, ALGO_FUGUE, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, b, NULL, queue_sph_kernel, c, NULL }
+  { a, ALGO_FUGUE, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, 0, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, b, NULL, NULL, queue_sph_kernel, c, NULL }
   A_FUGUE("fuguecoin", fuguecoin_regenhash, sha256),
   A_FUGUE("groestlcoin", groestlcoin_regenhash, sha256),
   A_FUGUE("diamond", groestlcoin_regenhash, gen_hash),
 #undef A_FUGUE
 
-  { "whirlcoin", ALGO_WHIRL, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 3, 8 * 16 * 4194304, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, whirlcoin_regenhash, NULL, queue_whirlcoin_kernel, sha256, NULL },
-  { "whirlpoolx", ALGO_WHIRLPOOLX, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000FFFFUL, 0, 0, 0, whirlpoolx_regenhash, NULL, queue_whirlpoolx_kernel, gen_hash, NULL },
+  { "whirlcoin", ALGO_WHIRL, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 3, 8 * 16 * 4194304, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, whirlcoin_regenhash, NULL, NULL, queue_whirlcoin_kernel, sha256, NULL },
+  { "whirlpoolx", ALGO_WHIRLPOOLX, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000FFFFUL, 0, 0, 0, whirlpoolx_regenhash, NULL, NULL, queue_whirlpoolx_kernel, gen_hash, NULL },
 
-  { "blake256r8",  ALGO_BLAKECOIN, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x000000ffUL, 0, 128, 0, blakecoin_regenhash, precalc_hash_blakecoin, queue_blake_kernel, sha256,   NULL },
-  { "blake256r14", ALGO_BLAKE,     "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x00000000UL, 0, 128, 0, blake256_regenhash, precalc_hash_blake256, queue_blake_kernel, gen_hash, NULL },
-  { "vanilla",     ALGO_VANILLA,   "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x000000ffUL, 0, 128, 0, blakecoin_regenhash, precalc_hash_blakecoin, queue_blake_kernel, gen_hash, NULL },
+  { "blake256r8",  ALGO_BLAKECOIN, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x000000ffUL, 0, 128, 0, blakecoin_regenhash, NULL, precalc_hash_blakecoin, queue_blake_kernel, sha256,   NULL },
+  { "blake256r14", ALGO_BLAKE,     "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x00000000UL, 0, 128, 0, blake256_regenhash, blake256_midstate, blake256_prepare_work, queue_blake_kernel, gen_hash, NULL },
+  { "vanilla",     ALGO_VANILLA,   "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x000000ffUL, 0, 128, 0, blakecoin_regenhash, NULL, precalc_hash_blakecoin, queue_blake_kernel, gen_hash, NULL },
 
-  { "ethash",        ALGO_ETHASH,   "", 0x100010001LLU, 0x100010001LLU, 0x100010001LLU, 0, 0, 0xFF, 0xFFFF000000000000ULL, 72UL, 0, 128, 0, ethash_regenhash, NULL, queue_ethash_kernel, gen_hash, append_ethash_compiler_options },
-  { "ethash-genoil", ALGO_ETHASH,   "", 0x100010001LLU, 0x100010001LLU, 0x100010001LLU, 0, 0, 0xFF, 0xFFFF000000000000ULL, 72UL, 0, 128, 0, ethash_regenhash, NULL, queue_ethash_kernel, gen_hash, append_ethash_compiler_options },
-  { "ethash-new",    ALGO_ETHASH,   "", 0x100010001LLU, 0x100010001LLU, 0x100010001LLU, 0, 0, 0xFF, 0xFFFF000000000000ULL, 72UL, 0, 128, 0, ethash_regenhash, NULL, queue_ethash_kernel, gen_hash, append_ethash_compiler_options },
+  { "ethash",        ALGO_ETHASH,   "", 0x100010001LLU, 0x100010001LLU, 0x100010001LLU, 0, 0, 0xFF, 0xFFFF000000000000ULL, 72UL, 0, 128, 0, ethash_regenhash, NULL, NULL, queue_ethash_kernel, gen_hash, append_ethash_compiler_options },
+  { "ethash-genoil", ALGO_ETHASH,   "", 0x100010001LLU, 0x100010001LLU, 0x100010001LLU, 0, 0, 0xFF, 0xFFFF000000000000ULL, 72UL, 0, 128, 0, ethash_regenhash, NULL, NULL, queue_ethash_kernel, gen_hash, append_ethash_compiler_options },
+  { "ethash-new",    ALGO_ETHASH,   "", 0x100010001LLU, 0x100010001LLU, 0x100010001LLU, 0, 0, 0xFF, 0xFFFF000000000000ULL, 72UL, 0, 128, 0, ethash_regenhash, NULL, NULL, queue_ethash_kernel, gen_hash, append_ethash_compiler_options },
 
-  { "cryptonight", ALGO_CRYPTONIGHT, "", 1, 0x100010001LLU, 0x100010001LLU, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, 0, 0, cryptonight_regenhash, NULL, queue_cryptonight_kernel, gen_hash, NULL },
-  
-  { "equihash",     ALGO_EQUIHASH,   "", 1, (1ULL << 28), (1ULL << 28), 0, 0, 0x20000, 0xFFFF000000000000ULL, 0x00000000UL, 0, 128, 0, equihash_regenhash, NULL, queue_equihash_kernel, gen_hash, append_equihash_compiler_options },
-  
+  { "cryptonight", ALGO_CRYPTONIGHT, "", 1, 0x100010001LLU, 0x100010001LLU, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, 0, 0, cryptonight_regenhash, NULL, NULL, queue_cryptonight_kernel, gen_hash, NULL },
+
+  { "equihash",     ALGO_EQUIHASH,   "", 1, (1ULL << 28), (1ULL << 28), 0, 0, 0x20000, 0xFFFF000000000000ULL, 0x00000000UL, 0, 128, 0, equihash_regenhash, NULL, NULL, queue_equihash_kernel, gen_hash, append_equihash_compiler_options },
+
   // Terminator (do not remove)
   { NULL, ALGO_UNK, "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL }
 };
@@ -1346,10 +2141,13 @@ void copy_algorithm_settings(algorithm_t* dest, const char* algo)
       dest->rw_buffer_size = src->rw_buffer_size;
       dest->cq_properties = src->cq_properties;
       dest->regenhash = src->regenhash;
-      dest->precalc_hash = src->precalc_hash;
+	  dest->calc_midstate = src->calc_midstate;
+	  dest->prepare_work = src->prepare_work;
       dest->queue_kernel = src->queue_kernel;
+      dest->enqueue_kernels = src->enqueue_kernels;
       dest->gen_hash = src->gen_hash;
       dest->set_compile_options = src->set_compile_options;
+	  dest->flexibility = src->flexibility;
       break;
     }
   }
@@ -1386,6 +2184,11 @@ static const char *lookup_algorithm_alias(const char *lookup_alias, uint8_t *nfa
   ALGO_ALIAS("x15", "bitblock");
   ALGO_ALIAS("x15modold", "bitblockold");
   ALGO_ALIAS("x15old", "bitblockold");
+  ALGO_ALIAS("x16r", "x16r");
+  ALGO_ALIAS("x16s", "x16s");
+  ALGO_ALIAS("x17", "x17");
+  ALGO_ALIAS("xevan", "xevan");
+  ALGO_ALIAS("phi", "phi");
   ALGO_ALIAS("nist5", "talkcoin-mod");
   ALGO_ALIAS("keccak", "maxcoin");
   ALGO_ALIAS("whirlpool", "whirlcoin");
@@ -1394,6 +2197,7 @@ static const char *lookup_algorithm_alias(const char *lookup_alias, uint8_t *nfa
   ALGO_ALIAS("blakecoin", "blake256r8");
   ALGO_ALIAS("blake", "blake256r14");
   ALGO_ALIAS("zcash", "equihash");
+  ALGO_ALIAS("thorsriddle", "polytimos");
 
 #undef ALGO_ALIAS
 #undef ALGO_ALIAS_NF

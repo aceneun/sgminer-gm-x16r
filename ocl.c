@@ -38,6 +38,7 @@
 #include "algorithm/pluck.h"
 #include "algorithm/yescrypt.h"
 #include "algorithm/lyra2rev2.h"
+#include "algorithm/lyra2Z.h"
 #include "algorithm/equihash.h"
 
 /* FIXME: only here for global config vars, replace with configuration.h
@@ -87,11 +88,25 @@ bool get_opencl_platform(int preferred_platform_id, cl_platform_id *platform) {
   for (i = 0; i < numPlatforms; i++) {
     if (preferred_platform_id >= 0 && (int)i != preferred_platform_id)
       continue;
+  
+    // Look for AMD OpenCL platform if prefered platform not set
+    if (preferred_platform_id < 0) {
+      char platformName[1024];
+      clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, 1024, platformName, NULL);
+      if(strstr(platformName, "Advanced Micro Devices") == NULL &&
+        strstr(platformName, "Apple") == NULL)
+          continue;
+    }
 
     *platform = platforms[i];
     ret = true;
     break;
   }
+  
+  if (preferred_platform_id < 0 && !ret) {
+    applog(LOG_ERR, "No AMD platform found. Please manually specify OpenCL platform.");
+  }
+  
 out:
   if (platforms) free(platforms);
   return ret;
@@ -137,26 +152,6 @@ int clDevicesNum(void) {
       clGetDeviceInfo(devices[j], CL_DEVICE_NAME, sizeof(pbuff), pbuff, NULL);
       applog(LOG_INFO, "\t%i\t%s", j, pbuff);
 
-#ifndef CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD
-#define CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD        1
-#define CL_DEVICE_TOPOLOGY_AMD                  0x4037
-
-      typedef union
-      {
-        struct { cl_uint type; cl_uint data[5]; } raw;
-        struct { cl_uint type; cl_char unused[17]; cl_char bus; cl_char device; cl_char function; } pcie;
-      } cl_device_topology_amd;
-#endif
-      cl_device_topology_amd topology;
-      status = clGetDeviceInfo (devices[j], CL_DEVICE_TOPOLOGY_AMD, sizeof(cl_device_topology_amd), &topology, NULL);
-      memset(gpus[j].sysfs_info.pcie_index, 0xff, sizeof(gpus[j].sysfs_info.pcie_index));
-      if (status == CL_SUCCESS && topology.raw.type == CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD) {
-        uint8_t *pcie_index = gpus[j].sysfs_info.pcie_index;
-        pcie_index[0] = topology.pcie.bus;
-        pcie_index[1] = topology.pcie.device;
-        pcie_index[2] = topology.pcie.function;
-        applog(LOG_DEBUG, "GPU%d: detected PCIe topology 0000:%.2x:%.2x.%.1x", j, pcie_index[0], pcie_index[1], pcie_index[2]);
-      }
     }
     free(devices);
   }
@@ -370,7 +365,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 
   clState->goffset = true;
 
-  clState->wsize = (cgpu->work_size && cgpu->work_size <= clState->max_work_size) ? cgpu->work_size : 256;
+  clState->wsize = (cgpu->work_size && cgpu->work_size <= clState->max_work_size) ? cgpu->work_size : 64;
 
   if (!cgpu->opt_lg) {
     applog(LOG_DEBUG, "GPU %d: selecting lookup gap of 2", gpu);
@@ -726,6 +721,11 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 
     applog(LOG_DEBUG, "GPU %d: computing max. global thread count to %u", gpu, (unsigned)(cgpu->thread_concurrency));
   }
+  else if (cgpu->algorithm.type == ALGO_LYRA2Z && !cgpu->opt_tc) {
+	  size_t GlobalThreads;
+	  set_threads_hashes(1, clState->compute_shaders, &GlobalThreads, 1, &cgpu->intensity, &cgpu->xintensity, &cgpu->rawintensity, &cgpu->algorithm);
+	  cgpu->thread_concurrency = GlobalThreads;
+  }
   else if (!cgpu->opt_tc) {
     unsigned int sixtyfours;
 
@@ -774,7 +774,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
 
   // Load program from file or build it if it doesn't exist
   if (!(clState->program = load_opencl_binary_kernel(build_data))) {
-    applog(LOG_NOTICE, "Building binary %s", build_data->binary_filename);
+    applog(LOG_WARNING, "Building binary %s for the first time.\nThis may take several minutes.", build_data->binary_filename);
 
     if (!(clState->program = build_opencl_kernel(build_data, filename))) {
       return NULL;
@@ -826,7 +826,7 @@ _clState *initCl(unsigned int gpu, char *name, size_t nameSize, algorithm_t *alg
     snprintf(buffer, sizeof(buffer), "buffer2");
     if (status != CL_SUCCESS)
       goto out;
-    clState->buffer3 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, RC_SIZE, NULL, &status); 
+    clState->buffer3 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, RC_SIZE, NULL, &status);
     snprintf(buffer, sizeof(buffer), "buffer3");
     if (status != CL_SUCCESS)
       goto out;
@@ -894,7 +894,7 @@ out:
       applog(LOG_ERR, "Error %d: Creating Kernel from program. (clCreateKernel)", status);
       return NULL;
     }
-  
+
     clState->n_extra_kernels = algorithm->n_extra_kernels;
     if (clState->n_extra_kernels > 0) {
       unsigned int i;
@@ -912,7 +912,7 @@ out:
       }
     }
   }
-    
+
 
   if (algorithm->type == ALGO_ETHASH) {
     clState->GenerateDAG = clCreateKernel(clState->program, "GenerateDAG", &status);
@@ -923,7 +923,7 @@ out:
     }
   }
 
-  size_t bufsize;
+  size_t bufsize = 0;
   size_t buf1size;
   size_t buf3size;
   size_t buf2size;
@@ -935,11 +935,18 @@ out:
     case ALGO_ETHASH:
       readbufsize = 32;
       break;
+	case ALGO_TRIBUS:
+	  readbufsize = 128 + 16; // midstate + endofdata (16)
+	  break;
     default:
       readbufsize = 128;
   }
-
-  if (algorithm->rw_buffer_size < 0) {
+  if (algorithm->flexibility.allocate_resources) {
+   // Buffer initialization delegated to specific kernel implementation.
+   // Nothing really to do here, allocation really takes place below.
+   // I keep the readbufsize for easiness; unification is left as exercise.
+  }
+  else if (algorithm->rw_buffer_size < 0) {
     // calc buffer size for neoscrypt
     if (algorithm->type == ALGO_NEOSCRYPT) {
       /* The scratch/pad-buffer needs 32kBytes memory per thread. */
@@ -999,10 +1006,37 @@ out:
     applog(LOG_DEBUG, "Buffer sizes: %lu RW, %lu R", (unsigned long)bufsize, (unsigned long)readbufsize);
   }
 
+  // Let's start with the basics. Each algorithm reads a block header and adds a nonce. The output is a list of
+  // 'good enough' nonces. Define those two buffers first.
+  applog(LOG_DEBUG, "Using read buffer sized %lu", (unsigned long)readbufsize);
+  clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, readbufsize, NULL, &status);
+  if (status != CL_SUCCESS) {
+	  applog(LOG_ERR, "Error %d: clCreateBuffer (CLbuffer0)", status);
+	  return NULL;
+  }
+
+  clState->MidstateBuf = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, 64, NULL, &status);
+  if (status != CL_SUCCESS) {
+	  applog(LOG_ERR, "Error %d: clCreateBuffer (MidstateBuf)", status);
+	  return NULL;
+  }
+
+  applog(LOG_DEBUG, "Using output buffer sized %lu", BUFFERSIZE);
+  clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, BUFFERSIZE, NULL, &status);
+  if (status != CL_SUCCESS) {
+	  applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
+	  return NULL;
+  }
+
   clState->padbuffer8 = NULL;
   clState->buffer1 = NULL;
   clState->buffer2 = NULL;
   clState->buffer3 = NULL;
+
+  if (algorithm->flexibility.allocate_resources) { // if defined, explicit alloc overrides the legacy bindings
+	  algorithm->flexibility.allocate_resources(clState, cgpu->thread_concurrency);
+	  return clState;
+  }
 
   if (bufsize > 0) {
     applog(LOG_DEBUG, "Creating read/write buffer sized %lu", (unsigned long)bufsize);
@@ -1059,7 +1093,30 @@ out:
       return NULL;
     }
   }
-  
+
+  if (algorithm->type == ALGO_LYRA2Z) {
+	  size_t GlobalThreads;
+	  //	  readbufsize = 76UL;
+		  
+      set_threads_hashes(1, clState->compute_shaders, &GlobalThreads, 1, &cgpu->intensity, &cgpu->xintensity, &cgpu->rawintensity, &cgpu->algorithm);
+	  clState->buffer1 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, 16 * 8 * GlobalThreads, NULL, &status);
+	  if (status != CL_SUCCESS) {
+		applog(LOG_ERR, "Error %d when creating lyra2z state buffer.\n", status);
+		  return NULL;
+		  
+	  }
+	  
+		  
+		  clState->Scratchpads = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, sizeof(cl_ulong)*LYRA2Z_SCRATCHBUF_SIZE * GlobalThreads, NULL, &status);
+	  
+		  if (status != CL_SUCCESS) {
+		  applog(LOG_ERR, "Error %d when creating lyra2z scratchpads buffer.\n", status);
+		  return NULL;
+		  
+	  }
+	  
+  }
+
   if (algorithm->type == ALGO_CRYPTONIGHT) {
     size_t GlobalThreads;
     readbufsize = 128UL;
@@ -1089,24 +1146,8 @@ out:
       return NULL;
     }
   }
-  
-  applog(LOG_DEBUG, "Using read buffer sized %lu", (unsigned long)readbufsize);
-  clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_ONLY, readbufsize, NULL, &status);
-  if (status != CL_SUCCESS) {
-    applog(LOG_ERR, "Error %d: clCreateBuffer (CLbuffer0)", status);
-    return NULL;
-  }
 
   clState->devid = cgpu->device_id;
 
-  size_t buffersize = MAX(sizeof(sols_t), BUFFERSIZE);
-  applog(LOG_DEBUG, "Using output buffer sized %lu", buffersize);
-  clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, buffersize, NULL, &status);
-  if (status != CL_SUCCESS) {
-    applog(LOG_ERR, "Error %d: clCreateBuffer (outputBuffer)", status);
-    return NULL;
-  }
-
   return clState;
 }
-

@@ -53,9 +53,9 @@ char *curly = ":D";
 
 #include "compat.h"
 #include "miner.h"
+#include "donate.h"
 #include "findnonce.h"
 #include "adl.h"
-#include "sysfs-gpu-controls.h"
 #include "driver-opencl.h"
 #include "bench_block.h"
 
@@ -70,6 +70,11 @@ char *curly = ":D";
   #include <errno.h>
   #include <fcntl.h>
   #include <sys/wait.h>
+#endif
+
+#if _MSC_VER >= 1400 
+FILE _iob[] = { *stdin, *stdout, *stderr, *vsprintf };
+extern "C" FILE * __cdecl __iob_func(void) { return _iob; }
 #endif
 
 float (*gpu_temp)(int);
@@ -194,6 +199,12 @@ double opt_diff_mult = 0.0;
 char *opt_kernel_path;
 char *sgminer_path;
 
+bool opt_benchmark = false;
+uint8_t opt_benchmark_seq[17] = {
+  0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
+  0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF
+};
+
 #define QUIET (opt_quiet || opt_realquiet)
 
 struct thr_info *control_thr;
@@ -267,6 +278,10 @@ unsigned int total_go, total_ro;
 
 struct pool **pools;
 struct pool *currentpool = NULL;
+struct pool *prev_pool = NULL;
+double dev_donate_percent = MIN_DEV_DONATE_PERCENT;
+time_t dev_timestamp;
+time_t dev_timestamp_offset;
 
 struct strategies strategies[] = {
   { "Failover" },
@@ -371,7 +386,7 @@ static void set_current_pool(struct pool *pool) {
   currentpool = pool;
 
   cg_wlock(&currentpool->data_lock);
-  if (currentpool->algorithm.type == ALGO_ETHASH) 
+  if (currentpool->algorithm.type == ALGO_ETHASH)
     currentpool->eth_cache.disabled = false;
   cg_wunlock(&currentpool->data_lock);
 }
@@ -661,6 +676,15 @@ struct pool *current_pool(void)
   return pool;
 }
 
+// Get dev pool ID
+static struct pool *get_dev_pool(algorithm_type_t algo)
+{
+  for (int i = 0; i < total_pools; i++) {
+    if (pools[i]->is_dev_pool && pools[i]->algorithm.type == algo) return pools[i];
+  }
+  return NULL;
+}
+
 /* Pool variant of test and set */
 static bool pool_tset(struct pool *pool, bool *var)
 {
@@ -801,6 +825,21 @@ static char *set_rotate(const char *arg, int *i)
 static char *set_rr(enum pool_strategy *strategy)
 {
   *strategy = POOL_ROUNDROBIN;
+  return NULL;
+}
+
+char *set_donate_percent(const char *arg)
+{
+  float d = atof(arg);
+  if (d < 0.)
+    return NULL;
+  if (d < MIN_DEV_DONATE_PERCENT)
+    printf("Minimum dev donation is %.1f%%.\n",
+      (double)MIN_DEV_DONATE_PERCENT);
+  else if (d >= 100)
+    dev_donate_percent = 100;
+  else
+    dev_donate_percent = d;
   return NULL;
 }
 
@@ -1030,6 +1069,7 @@ static void enable_pool(struct pool *pool)
 
 static void disable_pool(struct pool *pool)
 {
+  if (pool->is_dev_pool) return;
   if (pool->state == POOL_ENABLED)
     enabled_pools--;
   pool->state = POOL_DISABLED;
@@ -1046,6 +1086,7 @@ static void reject_pool(struct pool *pool)
  * still be work referencing it. We just remove it from the pools list */
 void remove_pool(struct pool *pool)
 {
+  if (pool->is_dev_pool) return;
   int i, last_pool = total_pools - 1;
   struct pool *other;
 
@@ -1398,6 +1439,26 @@ char *set_difficulty_multiplier(char *arg)
   return NULL;
 }
 
+char *set_benchmark_sequence(const char *arg)
+{
+  if (!(arg && arg[0]))
+    return "Invalid parameter for set benchmark sequence";
+  if (strlen(arg) != 16)
+    return "Benchmark sequence must be 16 characters";
+  uint i;
+  for (i = 0; i < strlen(arg); i++) {
+    if (!( ('0' <= arg[i] <= '9') || ('A' <= arg[i] <= 'F')))
+      return (char*) sprintf("Invalid hex digit %c", (const char*) arg[i]);
+    if (arg[i] >= 'A')
+      opt_benchmark_seq[i] = arg[i] - 'A' + 10;
+    else
+      opt_benchmark_seq[i] = arg[i] - '0';
+  }
+  opt_benchmark = true;
+
+  return NULL;
+}
+
 /* These options are available from config file or commandline */
 struct opt_table opt_config_table[] = {
   OPT_WITH_ARG("--algorithm|--kernel|-k",
@@ -1468,6 +1529,9 @@ struct opt_table opt_config_table[] = {
   OPT_WITH_ARG("--device|-d",
       set_default_devices, NULL, NULL,
       "Select device to use, one value, range and/or comma separated (e.g. 0-2,4) default: all"),
+  OPT_WITH_ARG("--donate",
+      set_donate_percent, NULL, NULL,
+      "percentage of time to donate to devs"),
   OPT_WITHOUT_ARG("--disable-rejecting",
       opt_set_bool, &opt_disable_pool,
       "Automatically disable pools that continually reject shares"),
@@ -1558,6 +1622,15 @@ struct opt_table opt_config_table[] = {
   OPT_WITHOUT_ARG("--luffa-parallel",
       opt_set_bool, &opt_luffa_parallel,
       "Set SPH_LUFFA_PARALLEL for Xn derived algorithms (Can give better hashrate for some GPUs)"),
+  OPT_WITHOUT_ARG("--benchmark",
+      opt_set_bool, &opt_benchmark,
+      "Enables benchmark mode for x16r/x16s. Hardcodes the hash order to"
+      " run each hash function exactly once"),
+  OPT_WITH_ARG("--benchmark-sequence",
+      set_benchmark_sequence, NULL, NULL,
+      "Hardcode the hash order in x16r/x16s"
+      " for benchmarking purposes. Must be an uppercase hex string"
+      "of length 16"),
 #ifdef HAVE_CURSES
   OPT_WITHOUT_ARG("--incognito",
       opt_set_bool, &opt_incognito,
@@ -1974,20 +2047,6 @@ static bool jobj_binary(const json_t *obj, const char *key,
 }
 #endif
 
-static void calc_midstate(struct work *work)
-{
-  unsigned char data[64];
-  uint32_t *data32 = (uint32_t *)data;
-  sph_sha256_context ctx;
-
-  flip64(data32, work->data);
-  sph_sha256_init(&ctx);
-  sph_sha256(&ctx, data, 64);
-  memcpy(work->midstate, ctx.val, 32);
-  endian_flip32(work->midstate, work->midstate);
-}
-
-
 static struct work *make_work(void)
 {
   struct work *w = (struct work *)calloc(sizeof(struct work), 1);
@@ -2052,7 +2111,7 @@ static bool __build_gbt_txns(struct pool *pool, json_t *res_val)
     quit(1, "Failed to calloc txn_hashes in __build_gbt_txns");
 
   if (pool->algorithm.type == ALGO_EQUIHASH) {
-    pool->coinbasetxn = realloc(pool->coinbasetxn, 1 << 22);  // reuse coinbasetxn
+    pool->coinbasetxn = (char*) realloc(pool->coinbasetxn, 1 << 22);  // reuse coinbasetxn
     size_t len = 0;
     for (i = 0; i < pool->gbt_txns; i++) {
       json_t *array_elem = json_array_get(txn_array, i);
@@ -2071,7 +2130,7 @@ static bool __build_gbt_txns(struct pool *pool, json_t *res_val)
     applog(LOG_DEBUG, "gbt_txns: %s", pool->coinbasetxn);
     goto out;
   }
-  
+
   if (!pool->gbt_txns)
     goto out;
 
@@ -2289,10 +2348,8 @@ static void gen_gbt_work(struct pool *pool, struct work *work)
     free(header);
   }
 
-  // Neoscrypt doesn't calc_midstate()
-  if (pool->algorithm.type != ALGO_NEOSCRYPT) {
-    calc_midstate(work);
-  }
+  if (pool->algorithm.calc_midstate) pool->algorithm.calc_midstate(work);
+
   local_work++;
   work->pool = pool;
   work->gbt = true;
@@ -2494,7 +2551,7 @@ static bool getwork_decode(json_t *res_val, struct work *work)
       if (opt_morenotices) {
         applog(LOG_DEBUG, "%s: Calculating midstate locally", isnull(get_pool_name(work->pool), ""));
       }
-      calc_midstate(work);
+	  if (work->pool->algorithm.calc_midstate) work->pool->algorithm.calc_midstate(work);
     }
   }
 
@@ -3324,7 +3381,7 @@ static bool submit_upstream_work(struct work *work, CURL *curl, char *curl_err_s
       str_len += strlen(workid);
     }
     */
-    
+
     uint8_t txn_cnt_bin[9];
     cg_rlock(&pool->gbt_lock);
     int txn_cnt_len = add_var_int(txn_cnt_bin, pool->gbt_txns + 1);
@@ -5409,7 +5466,7 @@ static void hashmeter(int thr_id, struct timeval *diff,
     double thread_rolling = 0.0;
     int i;
 
-    applog(LOG_DEBUG, "[thread %d: %"PRIu64" hashes, %.5g khash/sec]",
+    applog(LOG_DEBUG, "[thread %d: %" PRIu64" hashes, %.5g khash/sec]",
       thr_id, hashes_done, hashes_done / 1000. / secs);
 
     /* Rolling average for each thread and each device */
@@ -5458,11 +5515,6 @@ static void hashmeter(int thr_id, struct timeval *diff,
     goto out_unlock;
   showlog = true;
   cgtime(&total_tv_end);
-
-  struct timeval runtime;
-  timersub(&total_tv_end, &launch_time, &runtime);
-  double runtime_secs = runtime.tv_sec + 1e-6 * runtime.tv_usec;
-  applog(LOG_DEBUG, "total hashes: %g, total runtime / s: %g", 1e6 * total_mhashes_done, runtime_secs);
 
   local_secs = (double)total_diff.tv_sec + ((double)total_diff.tv_usec / 1000000.0);
   decay_time(&total_rolling, local_mhashes_done / local_secs, local_secs);
@@ -5550,18 +5602,6 @@ static bool parse_stratum_response(struct pool *pool, char *s)
     goto out;
   }
 
-  json_t *status = json_object_get(res_val, "status");
-
-  if (status && pool->algorithm.type == ALGO_CRYPTONIGHT) {
-    const char *s = json_string_value(status);
-
-    if (s && !strcmp(s, "KEEPALIVED")) {
-      applog(LOG_DEBUG, "Keepalived from %s received", get_pool_name(pool));
-      ret = true;
-      goto out;
-    }
-  }
-
   id = json_integer_value(id_val);
 
   mutex_lock(&sshare_lock);
@@ -5600,8 +5640,7 @@ static bool parse_stratum_response(struct pool *pool, char *s)
         goto out;
       }
 
-      json_t *status = json_object_get(res_val, "status");
-      if (json_is_null(err_val) && status != NULL && !strcmp(json_string_value(status), "OK")) {
+	  if (json_is_null(err_val) && !strcmp(json_string_value(json_object_get(res_val, "status")), "OK")) {
         success = true;
       }
       else {
@@ -5609,11 +5648,11 @@ static bool parse_stratum_response(struct pool *pool, char *s)
 
         if (err_val) {
           ss = json_dumps(err_val, JSON_INDENT(3));
-        } 
+        }
         else {
           ss = strdup("(unknown reason)");
         }
-        
+
         applog(LOG_INFO, "JSON-RPC response decode failed: %s", ss);
 
         free(ss);
@@ -5835,7 +5874,7 @@ static void *stratum_rthread(void *userdata)
     FD_SET(pool->sock, &rd);
     timeout.tv_sec = 90;
     timeout.tv_usec = 0;
-    
+
     /* The protocol specifies that notify messages should be sent
      * every minute so if we fail to receive any for 90 seconds we
      * assume the connection has been dropped and treat this pool
@@ -5879,7 +5918,7 @@ static void *stratum_rthread(void *userdata)
     stratum_resumed(pool);
 
     applog(LOG_DEBUG, "%s: parsing %s...", __func__, s);
-    
+
     if (!parse_method(pool, s) && !parse_stratum_response(pool, s))
       applog(LOG_INFO, "Unknown stratum msg: %s", s);
     else if (pool->swork.clean) {
@@ -5888,16 +5927,16 @@ static void *stratum_rthread(void *userdata)
       /* Generate a single work item to update the current
        * block database */
       pool->swork.clean = false;
-      
+
       switch(pool->algorithm.type) {
         case ALGO_ETHASH:
           gen_stratum_work_eth(pool, work);
           break;
-        
+
         case ALGO_CRYPTONIGHT:
           gen_stratum_work_cn(pool, work);
           break;
-          
+
         default:
           gen_stratum_work(pool, work);
       }
@@ -5988,14 +6027,14 @@ static void *stratum_sthread(void *userdata)
       applog(LOG_DEBUG, "stratum_sthread() algorithm = %s", pool->algorithm.name);
 
       char *ASCIINonce = bin2hex(work->data + 39, 4);
-      
+
       ASCIIResult = bin2hex(work->hash, 32);
-      
+
       mutex_lock(&sshare_lock);
       /* Give the stratum share a unique id */
       sshare->id = swork_id++;
       mutex_unlock(&sshare_lock);
-      
+
       snprintf(s, s_size, "{\"method\": \"submit\", \"params\": {\"id\": \"%s\", \"job_id\": \"%s\", \"nonce\": \"%s\", \"result\": \"%s\"}, \"id\":%d}", pool->XMRAuthID, work->job_id, ASCIINonce, ASCIIResult, sshare->id);
 
       free(ASCIINonce);
@@ -6010,13 +6049,13 @@ static void *stratum_sthread(void *userdata)
       sshare->work = work;
 
       applog(LOG_DEBUG, "stratum_sthread() algorithm = %s", pool->algorithm.name);
-      
+
       //get nonce minus extranonce set by server
       nonce = bin2hex(work->equihash_data+108, 32);
       solution = bin2hex(work->equihash_data+140, 1347);
-      
+
       //applog(LOG_DEBUG, "%s: Nonce set to %s", __func__, nonce+strlen(work->nonce1));
-      
+
       mutex_lock(&sshare_lock);
       /* Give the stratum share a unique id */
       sshare->id = swork_id++;
@@ -6189,7 +6228,7 @@ retry_stratum:
 
       if (ret) {
         init_stratum_threads(pool);
-        
+
         if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
           struct work *work = make_work();
           gen_stratum_work_cn(pool, work);
@@ -6609,7 +6648,7 @@ static void gen_stratum_work_cn(struct pool *pool, struct work *work)
     return;
 
   applog(LOG_DEBUG, "[THR%d] gen_stratum_work_cn() - algorithm = %s", work->thr_id, pool->algorithm.name);
-  
+
   cg_rlock(&pool->data_lock);
   work->job_id = strdup(pool->swork.job_id);
   //strcpy(work->XMRID, pool->XMRID);
@@ -6621,7 +6660,7 @@ static void gen_stratum_work_cn(struct pool *pool, struct work *work)
   work->network_diff = pool->diff1;
   work->is_monero = pool->is_monero;
   cg_runlock(&pool->data_lock);
-  
+
   local_work++;
   work->pool = pool;
   work->stratum = true;
@@ -6635,7 +6674,7 @@ static void gen_stratum_work_cn(struct pool *pool, struct work *work)
   work->drv_rolllimit = 0;
 
   cgtime(&work->tv_staged);
-  
+
   applog(LOG_DEBUG, "gen_stratum_work_cn() done.");
 }
 
@@ -6647,15 +6686,15 @@ static void gen_stratum_work_equihash(struct pool *pool, struct work *work)
 
   /* Downgrade to a read lock to read off the pool variables */
   cg_dwlock(&pool->data_lock);
-  
+
   /* equihash already has the merkle root in the header no need to change it */
   memset(work->equihash_data, 0, 1487);
   memcpy(work->equihash_data, pool->header_bin, 128);
-  
+
   //add pool extra nonce
   hex2bin(work->equihash_data + 108, pool->nonce1, strlen(pool->nonce1) / 2);
   memcpy(work->equihash_data + 108 + 20 - work->nonce2_len, &work->nonce2, work->nonce2_len);
- 
+
   //add solutionsize
   add_var_int(work->equihash_data + 140, 1344);
 
@@ -6674,7 +6713,7 @@ static void gen_stratum_work_equihash(struct pool *pool, struct work *work)
 
     header = bin2hex(work->equihash_data, 143);
     applog(LOG_DEBUG, "[THR%d] Generated stratum header %s", work->thr_id, header);
-    applog(LOG_DEBUG, "[THR%d] job_id %s, nonce1 %s, nonce2 %"PRIu64", ntime %s", work->thr_id, work->job_id, work->nonce1, work->nonce2, work->ntime);
+    applog(LOG_DEBUG, "[THR%d] job_id %s, nonce1 %s, nonce2 %" PRIu64", ntime %s", work->thr_id, work->job_id, work->nonce1, work->nonce2, work->ntime);
     free(header);
   }
 
@@ -6702,7 +6741,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
     gen_stratum_work_equihash(pool, work);
     return;
   }
-  
+
   unsigned char merkle_root[32], merkle_sha[64];
   uint32_t *data32, *swap32;
   uint64_t nonce2le;
@@ -6787,7 +6826,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
     merkle_hash = bin2hex((const unsigned char *)merkle_root, 32);
     applog(LOG_DEBUG, "[THR%d] Generated stratum merkle %s", work->thr_id, merkle_hash);
     applog(LOG_DEBUG, "[THR%d] Generated stratum header %s", work->thr_id, header);
-    applog(LOG_DEBUG, "[THR%d] Work job_id %s nonce2 %"PRIu64" ntime %s", work->thr_id, work->job_id,
+    applog(LOG_DEBUG, "[THR%d] Work job_id %s nonce2 %" PRIu64" ntime %s", work->thr_id, work->job_id,
            work->nonce2, work->ntime);
     free(header);
     free(merkle_hash);
@@ -6797,7 +6836,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
   if (pool->algorithm.type == ALGO_NEOSCRYPT) {
     set_target_neoscrypt(work->target, work->sdiff, work->thr_id);
   } else {
-    calc_midstate(work);
+	  if (pool->algorithm.calc_midstate) pool->algorithm.calc_midstate(work);
     set_target(work->target, work->sdiff, pool->algorithm.diff_multiplier2, work->thr_id);
   }
 
@@ -6859,7 +6898,7 @@ static void apply_initial_gpu_settings(struct pool *pool)
   rd_lock(&mining_thr_lock);
 
   apply_switcher_options(options, pool);
-  
+
   //manually apply algorithm
   for (i = 0; i < nDevs; i++)
   {
@@ -7102,7 +7141,7 @@ static void apply_switcher_options(unsigned long options, struct pool *pool)
   //default basic intensity
   else if(opt_isset(options, SWITCHER_APPLY_INT8))
   {
-    default_profile.intensity = strdup("8");
+    default_profile.intensity = strdup("19");
     set_intensity(default_profile.intensity);
   }
 
@@ -7286,7 +7325,7 @@ static void get_work_prepare_thread(struct thr_info *mythr, struct work *work)
     }
 
     // Reset stats (e.g. for working_diff to be set properly in hash_sole_work)
-    zero_stats();
+    // zero_stats();
 
     //apply switcher options
     apply_switcher_options(pool_switch_options, work->pool);
@@ -7541,11 +7580,11 @@ static void update_work_stats(struct thr_info *thr, struct work *work)
   work->share_diff = share_diff(work);
 
   if (unlikely(test_diff > 0 && work->share_diff >= test_diff)) {
-    work->block = true;
-    work->pool->solved++;
-    found_blocks++;
-    work->mandatory = true;
-    applog(LOG_NOTICE, "Found block for %s!", get_pool_name(work->pool));
+	  work->block = true;
+	  work->pool->solved++;
+	  found_blocks++;
+	  work->mandatory = true;
+	  applog(LOG_NOTICE, "Found block for %s!", get_pool_name(work->pool));
   }
 
   mutex_lock(&stats_lock);
@@ -8103,6 +8142,16 @@ static void reap_curl(struct pool *pool)
     applog(LOG_DEBUG, "Reaped %d curl%s from %s", reaped, reaped > 1 ? "s" : "", get_pool_name(pool));
 }
 
+static bool is_dev_time() {
+	// Add 2 seconds to compensate for connection time
+	double dev_portion = (double)DONATE_CYCLE_TIME
+											* dev_donate_percent * 0.01 + 2;
+	if(dev_portion < 12) // No point in bothering with less than 10s
+		return false;
+	return (time(NULL) - dev_timestamp + dev_timestamp_offset) % DONATE_CYCLE_TIME
+					>= (DONATE_CYCLE_TIME - dev_portion);
+}
+
 static void *watchpool_thread(void __maybe_unused *userdata)
 {
   int intervals = 0;
@@ -8157,8 +8206,6 @@ static void *watchpool_thread(void __maybe_unused *userdata)
         pool->testing = false;
       }
 
-      sock_keepalived(pool, pool->XMRAuthID, -1);
-
       /* Test pool is idle once every minute */
       if (pool->idle && now.tv_sec - pool->tv_idle.tv_sec > 30) {
         cgtime(&pool->tv_idle);
@@ -8168,7 +8215,7 @@ static void *watchpool_thread(void __maybe_unused *userdata)
       }
 
       // if this pool is alive and the priority is greater (lower) than currently connected pool
-      if (!pool->idle && pool->prio < cp_prio()) {
+      if (!pool->idle && pool->prio < cp_prio() && !pool->is_dev_pool) {
         // failover strategy - switch when failover delay is met
         if (pool_strategy == POOL_FAILOVER && (now.tv_sec - pool->tv_idle.tv_sec > opt_fail_switch_delay)) {
           applog(LOG_WARNING, "%s stable for %d seconds", get_pool_name(pool), opt_fail_switch_delay);
@@ -8177,6 +8224,17 @@ static void *watchpool_thread(void __maybe_unused *userdata)
       }
 
     } //end pool loop
+
+    // if it's the dev time, switching to dev pool
+    // or, switch back if it's dev time ended
+    if (!currentpool->is_dev_pool && is_dev_time()) {
+      prev_pool = currentpool;
+      switch_pools(get_dev_pool(prev_pool->algorithm.type));
+    }
+    else if (currentpool->is_dev_pool && !is_dev_time()) {
+      switch_pools(prev_pool);
+    }
+
 
     // if the pool stategy is rotation and we have been over the rotate delay, switch pool
     if (pool_strategy == POOL_ROTATE && now.tv_sec - rotate_tv.tv_sec > 60 * opt_rotate_period) {
@@ -8312,8 +8370,9 @@ static void *watchdog_thread(void __maybe_unused *userdata)
       denable = &cgpu->deven;
       snprintf(dev_str, sizeof(dev_str), "%s%d", cgpu->drv->name, gpu);
 
-      gpu_autotune(gpu, denable);
-      if (opt_debug) {
+	  if (adl_active && cgpu->has_adl || cgpu->has_sysfs_hwcontrols)
+			  gpu_autotune(gpu, denable);
+	 if (opt_debug && cgpu->has_adl) {
         int engineclock = 0, memclock = 0, activity = 0, fanspeed = 0, fanpercent = 0, powertune = 0;
         float temp = 0, vddc = 0;
 
@@ -8339,11 +8398,13 @@ static void *watchdog_thread(void __maybe_unused *userdata)
 
         dev_error(cgpu, REASON_DEV_SICK_IDLE_60);
         event_notify("gpu_sick");
-
-        if (gpu_activity(gpu) > 50) {
-          applog(LOG_ERR, "GPU still showing activity suggesting a hard hang.");
-          applog(LOG_ERR, "Will not attempt to auto-restart it.");
-        } else if (opt_restart) {
+        #ifdef HAVE_ADL
+            if (adl_active && cgpu->has_adl && gpu_activity(gpu) > 50) {
+              applog(LOG_ERR, "GPU still showing activity suggesting a hard hang.");
+              applog(LOG_ERR, "Will not attempt to auto-restart it.");
+            } else 
+        #endif	
+		if (opt_restart) {
           applog(LOG_ERR, "%s: Attempting to restart", dev_str);
           reinit_device(cgpu);
         }
@@ -8474,7 +8535,6 @@ static void clean_up(bool restarting)
 #ifdef HAVE_ADL
   clear_adl(nDevs);
 #endif
-  sysfs_cleanup(nDevs);
   cgtime(&total_tv_end);
 #ifdef WIN32
   timeEndPeriod(1);
@@ -8533,8 +8593,8 @@ static void *test_pool_thread(void *arg)
     pool_tclear(pool, &pool->idle);
     bool first_pool = false;
 
-    cg_wlock(&control_lock);
-    if (!pools_active) {
+	cg_wlock(&control_lock);
+    if (!pools_active && !pool->is_dev_pool) {
       set_current_pool(pool);
       if (pool->pool_no != 0)
         first_pool = true;
@@ -8546,7 +8606,8 @@ static void *test_pool_thread(void *arg)
       applog(LOG_NOTICE, "Switching to %s - first alive pool", get_pool_name(pool));
 
     pool_resus(pool);
-    switch_pools(NULL);
+    if (!pool->is_dev_pool)
+      switch_pools(NULL);
   } else {
     pool_died(pool);
   }
@@ -9121,9 +9182,9 @@ int main(int argc, char *argv[])
 
   mutex_init(&eth_nonce_lock);
 #ifdef WIN32
-  rand_s(&eth_nonce);
-  for (int i = 0; i < sizeof(entropy); i += 4)
-    rand_s((uint32_t*)(entropy + i));
+  eth_nonce = (uint32_t)rand();
+  for (int i = 0; i < sizeof(entropy)/4; i ++)
+    ((uint32_t*)entropy)[i] = (uint32_t)rand();
 #else
   int fd = open("/dev/urandom", O_RDONLY);
   if (fd < 0)
@@ -9201,7 +9262,7 @@ int main(int argc, char *argv[])
 #endif
 
   /* Default algorithm specified in algorithm.c ATM */
-  set_algorithm(&default_profile.algorithm, "scrypt");
+  //set_algorithm(&default_profile.algorithm, "scrypt");
 
   devcursor = 8;
   logstart = devcursor + 1;
@@ -9301,6 +9362,165 @@ int main(int argc, char *argv[])
   //apply pool-specific config from profiles
   apply_pool_profiles();
 
+  bool is_dev_x16r_added = false;
+  bool is_dev_x16s_added = false;
+  bool is_dev_x17_added = false;
+  bool is_dev_xevan_added = false;
+  bool is_dev_phi_added = false;
+  bool is_dev_tribus_added = false;
+  bool is_dev_aergo_added = false;
+  bool is_dev_c11_added = false;
+  bool is_dev_polytimos_added = false;
+  bool is_dev_geek_added = false;
+  bool is_dev_skunk_added = false;
+  for (int i = 0; i < total_pools; i++) {
+	  switch (pools[i]->algorithm.type) {
+	  case ALGO_X16R:
+		  if (!is_dev_x16r_added) {
+			  struct pool *dev_pool_x16r = add_url();
+			  char *dev_url_x16r = "stratum+tcp://ravenminer.com:9999";
+			  setup_url(dev_pool_x16r, dev_url_x16r);
+			  dev_pool_x16r->rpc_user = strdup("RQfsnqLb4ApUcQYMJG3DxiHJDCtd6HhB3F");
+			  dev_pool_x16r->rpc_pass = strdup("c=RVN,donate");
+			  dev_pool_x16r->name = strdup("dev pool x16r");
+			  set_algorithm(&dev_pool_x16r->algorithm, "x16r");
+			  dev_pool_x16r->is_dev_pool = true;
+			  is_dev_x16r_added = true;
+		  }
+		  break;
+	  case ALGO_X16S:
+		  if (!is_dev_x16s_added) {
+			  struct pool *dev_pool_x16s = add_url();
+			  char *dev_url_x16s = "stratum+tcp://x16s.na.mine.zpool.ca:3663";
+			  setup_url(dev_pool_x16s, dev_url_x16s);
+			  dev_pool_x16s->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_x16s->rpc_pass = strdup("c=BTC");
+			  dev_pool_x16s->name = strdup("dev pool x16s");
+			  set_algorithm(&dev_pool_x16s->algorithm, "x16s");
+			  dev_pool_x16s->is_dev_pool = true;
+			  is_dev_x16s_added = true;
+		  }
+		  break;
+	  case ALGO_X17:
+		  if (!is_dev_x17_added) {
+			  struct pool *dev_pool_x17 = add_url();
+			  char *dev_url_x17 = "stratum+tcp://x17.na.mine.zpool.ca:3737";
+			  setup_url(dev_pool_x17, dev_url_x17);
+			  dev_pool_x17->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_x17->rpc_pass = strdup("c=BTC");
+			  dev_pool_x17->name = strdup("dev pool x17");
+			  set_algorithm(&dev_pool_x17->algorithm, "x17");
+			  dev_pool_x17->is_dev_pool = true;
+			  is_dev_x17_added = true;
+		  }
+		  break;
+	  case ALGO_XEVAN:
+		  if (!is_dev_xevan_added) {
+			  struct pool *dev_pool_xevan = add_url();
+			  char *dev_url_xevan = "stratum+tcp://xevan.mine.zpool.ca:3739";
+			  setup_url(dev_pool_xevan, dev_url_xevan);
+			  dev_pool_xevan->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_xevan->rpc_pass = strdup("c=BTC");
+			  dev_pool_xevan->name = strdup("dev pool xevan");
+			  set_algorithm(&dev_pool_xevan->algorithm, "xevan");
+			  dev_pool_xevan->is_dev_pool = true;
+			  is_dev_xevan_added = true;
+		  }
+		  break;
+	  case ALGO_PHI:
+		  if (!is_dev_phi_added) {
+			  struct pool *dev_pool_phi = add_url();
+			  char *dev_url_phi = "stratum+tcp://phi.mine.zpool.ca:8333";
+			  setup_url(dev_pool_phi, dev_url_phi);
+			  dev_pool_phi->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_phi->rpc_pass = strdup("c=BTC");
+			  dev_pool_phi->name = strdup("dev pool phi");
+			  set_algorithm(&dev_pool_phi->algorithm, "phi");
+			  dev_pool_phi->is_dev_pool = true;
+			  is_dev_phi_added = true;
+		  }
+		  break;
+	  case ALGO_TRIBUS:
+		  if (!is_dev_tribus_added) {
+			  struct pool *dev_pool_tribus = add_url();
+			  char *dev_url_tribus = "stratum+tcp://tribus.mine.zpool.ca:8533";
+			  setup_url(dev_pool_tribus, dev_url_tribus);
+			  dev_pool_tribus->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_tribus->rpc_pass = strdup("c=BTC");
+			  dev_pool_tribus->name = strdup("dev pool tribus");
+			  set_algorithm(&dev_pool_tribus->algorithm, "tribus");
+			  dev_pool_tribus->is_dev_pool = true;
+			  is_dev_tribus_added = true;
+		  }
+		  break;
+	  case ALGO_AERGO:
+		  if (!is_dev_aergo_added) {
+			  struct pool *dev_pool_aergo = add_url();
+			  char *dev_url_aergo = "stratum+tcp://aergo.na.mine.zpool.ca:3691";
+			  setup_url(dev_pool_aergo, dev_url_aergo);
+			  dev_pool_aergo->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_aergo->rpc_pass = strdup("c=BTC");
+			  dev_pool_aergo->name = strdup("dev pool aergo");
+			  set_algorithm(&dev_pool_aergo->algorithm, "aergo");
+			  dev_pool_aergo->is_dev_pool = true;
+			  is_dev_aergo_added = true;
+		  }
+		  break;
+	  case ALGO_C11:
+		  if (!is_dev_c11_added) {
+			  struct pool *dev_pool_c11 = add_url();
+			  char *dev_url_c11 = "stratum+tcp://c11.na.mine.zpool.ca:3573";
+			  setup_url(dev_pool_c11, dev_url_c11);
+			  dev_pool_c11->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_c11->rpc_pass = strdup("c=BTC");
+			  dev_pool_c11->name = strdup("dev pool c11");
+			  set_algorithm(&dev_pool_c11->algorithm, "c11");
+			  dev_pool_c11->is_dev_pool = true;
+			  is_dev_c11_added = true;
+		  }
+		  break;
+          case ALGO_POLYTIMOS:
+		  if (!is_dev_polytimos_added) {
+			  struct pool *dev_pool_polytimos= add_url();
+			  char *dev_url_polytimos = "stratum+tcp://polytimos.na.mine.zpool.ca:8463";
+			  setup_url(dev_pool_polytimos, dev_url_polytimos);
+			  dev_pool_polytimos->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+			  dev_pool_polytimos->rpc_pass = strdup("c=BTC");
+			  dev_pool_polytimos->name = strdup("dev pool polytimos");
+			  set_algorithm(&dev_pool_polytimos->algorithm, "polytimos");
+			  dev_pool_polytimos->is_dev_pool = true;
+			  is_dev_polytimos_added = true;
+		  }
+		  break;
+		  case ALGO_GEEK:
+			  if (!is_dev_geek_added) {
+				  struct pool *dev_pool_geek = add_url();
+				  char *dev_url_geek = "stratum+tcp://eu.mining.geekcash.org:3333";
+				  setup_url(dev_pool_geek, dev_url_geek);
+				  dev_pool_geek->rpc_user = strdup("Gea5nnRNTEFHQC7CFDVV9FHHWex3xRMjhh");
+				  dev_pool_geek->rpc_pass = strdup("donate");
+				  dev_pool_geek->name = strdup("dev pool geek");
+				  set_algorithm(&dev_pool_geek->algorithm, "geek");
+				  dev_pool_geek->is_dev_pool = true;
+				  is_dev_geek_added = true;
+			  }
+			  break;
+		  case ALGO_SKUNK:
+			  if (!is_dev_skunk_added) {
+				  struct pool *dev_pool_skunk = add_url();
+				  char *dev_url_skunk = "stratum+tcp://skunk.na.mine.zpool.ca:8433";
+				  setup_url(dev_pool_skunk, dev_url_skunk);
+				  dev_pool_skunk->rpc_user = strdup("3Bh7gjE4aNZzkFD6eu3jGKGHw3aw5vRfL6");
+				  dev_pool_skunk->rpc_pass = strdup("c=BTC");
+				  dev_pool_skunk->name = strdup("dev pool skunk");
+				  set_algorithm(&dev_pool_skunk->algorithm, "skunk");
+				  dev_pool_skunk->is_dev_pool = true;
+				  is_dev_skunk_added = true;
+			  }
+			  break;
+	  }
+  }
+
   most_devices = 0;
   mining_threads = 0;
  if (opt_devs_enabled) {
@@ -9351,7 +9571,7 @@ int main(int argc, char *argv[])
   if (!getenv("GPU_USE_SYNC_OBJECTS"))
     applog(LOG_WARNING, "WARNING: GPU_USE_SYNC_OBJECTS is not specified!");
 
-  if (!total_pools) {
+  if (total_pools <= 0) {
     applog(LOG_WARNING, "Need to specify at least one pool server.");
 #ifdef HAVE_CURSES
     if (!use_curses || !input_pool(false))
@@ -9481,6 +9701,9 @@ int main(int argc, char *argv[])
   cgtime(&total_tv_end);
   get_datestamp(datestamp, sizeof(datestamp), &total_tv_start);
   launch_time = total_tv_start;
+  dev_timestamp = time(NULL);
+  dev_timestamp_offset = fmod(rand(),
+    DONATE_CYCLE_TIME * (1 - dev_donate_percent/100.) - 30);
 
   watchpool_thr_id = 2;
   thr = &control_thr[watchpool_thr_id];
@@ -9602,15 +9825,15 @@ retry:
         case ALGO_ETHASH:
           gen_stratum_work_eth(pool, work);
           break;
-          
+
         case ALGO_CRYPTONIGHT:
           gen_stratum_work_cn(pool, work);
           break;
-          
+
         default:
            gen_stratum_work(pool, work);
       }
- 
+
       applog(LOG_DEBUG, "Generated stratum work");
       stage_work(work);
       continue;

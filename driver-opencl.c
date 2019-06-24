@@ -32,6 +32,8 @@
 #include "driver-opencl.h"
 #include "findnonce.h"
 #include "ocl.h"
+#include "ocl/cl_state.h"
+#include "ocl/flexible_kernel_functions.h"
 #include "adl.h"
 #include "util.h"
 #include "sysfs-gpu-controls.h"
@@ -421,7 +423,7 @@ char *set_gpu_powertune(char *arg)
   if (nextptr == NULL)
     return "Invalid parameters for set gpu powertune";
   val = atoi(nextptr);
-  if (val < -99 || val > 499)
+  if (val < -99 || val > 99)
     return "Invalid value passed to set_gpu_powertune";
 
   gpus[device++].gpu_powertune = val;
@@ -429,7 +431,7 @@ char *set_gpu_powertune(char *arg)
   while ((nextptr = strtok(NULL, ",")) != NULL) {
     nextptr[-1] = ',';
     val = atoi(nextptr);
-    if (val < -99 || val > 499)
+    if (val < -99 || val > 99)
       return "Invalid value passed to set_gpu_powertune";
 
     gpus[device++].gpu_powertune = val;
@@ -485,7 +487,7 @@ char *set_temp_overheat(char *arg)
     return "Invalid value passed to set temp overheat";
 
   gpus[device].adl.overtemp = val;
-  gpus[device++].sysfs_info.overheat_temp = val;
+  gpus[device++].sysfs_info.OverHeatTemp = val;
 
   while ((nextptr = strtok(NULL, ",")) != NULL) {
     val = atoi(nextptr);
@@ -493,12 +495,12 @@ char *set_temp_overheat(char *arg)
       return "Invalid value passed to set temp overheat";
 
     gpus[device].adl.overtemp = val;
-    gpus[device++].sysfs_info.overheat_temp = val;
+    gpus[device++].sysfs_info.OverHeatTemp = val;
   }
   if (device == 1) {
     for (i = device; i < MAX_GPUDEVICES; i++) {
       gpus[i].adl.overtemp = val;
-      gpus[i].sysfs_info.overheat_temp = val;
+      gpus[i].sysfs_info.OverHeatTemp = val;
     }
   }
 
@@ -519,7 +521,7 @@ char *set_temp_target(char *arg)
 
   tt = &gpus[device].adl.targettemp;
   *tt = val;
-  tt = &gpus[device++].sysfs_info.target_temp;
+  tt = (int*) &gpus[device++].sysfs_info.TargetTemp;
   *tt = val;
 
   while ((nextptr = strtok(NULL, ",")) != NULL) {
@@ -529,14 +531,14 @@ char *set_temp_target(char *arg)
 
     tt = &gpus[device].adl.targettemp;
     *tt = val;
-    tt = &gpus[device++].sysfs_info.target_temp;
+    tt = (int*) &gpus[device++].sysfs_info.TargetTemp;
     *tt = val;    
   }
   if (device == 1) {
     for (i = device; i < MAX_GPUDEVICES; i++) {
       tt = &gpus[i].adl.targettemp;
       *tt = val;
-      tt = &gpus[i].sysfs_info.target_temp;
+      tt = (int*) &gpus[i].sysfs_info.TargetTemp;
       *tt = val;
     }
   }
@@ -1260,6 +1262,12 @@ static void get_opencl_statline(char *buf, size_t bufsiz, struct cgpu_info *gpu)
 
 struct opencl_thread_data {
   cl_int(*queue_kernel_parameters)(_clState *, dev_blk_ctx *, cl_uint);
+  cl_int(*enqueue_kernels)(_clState *, size_t*, size_t*, size_t*);
+  // New, more flexible kernel initialization and dispatch. The legacy system is totally dumb, it requires kernels to conform to a
+  // not very clear protocol so they can be dispatched in a loop no questions asked. It even initializes them dumbly, it requires
+  // each algorithm to re-use a set of fields and allocation strategies, when a new one is needed they just add an 'if' and then
+  // another and another and another. It little matters than allocation becomes a huge mess in itself.
+  flexible_algorithm_functions_t flexibility;
   uint32_t *res;
 };
 
@@ -1339,6 +1347,8 @@ static bool opencl_thread_init(struct thr_info *thr)
   }
 
   thrdata->queue_kernel_parameters = gpu->algorithm.queue_kernel;
+  thrdata->enqueue_kernels = gpu->algorithm.enqueue_kernels;
+  thrdata->flexibility = gpu->algorithm.flexibility;
   thrdata->res = (uint32_t *)calloc(BUFFERSIZE, 1);
 
   if (!thrdata->res) {
@@ -1366,8 +1376,8 @@ static bool opencl_thread_init(struct thr_info *thr)
 static bool opencl_prepare_work(struct thr_info __maybe_unused *thr, struct work *work)
 {
   work->blk.work = work;
-  if (work->pool->algorithm.precalc_hash)
-    work->pool->algorithm.precalc_hash(&work->blk, 0, (uint32_t *)(work->data));
+  if (work->pool->algorithm.prepare_work) 
+	  work->pool->algorithm.prepare_work(&work->blk, (uint32_t *)(work->midstate), (uint32_t *)(work->data));
   thr->pool_no = work->pool->pool_no;
 
   return true;
@@ -1433,7 +1443,7 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
       cg_runlock(&work->pool->gbt_lock);
     }
     
-    thrdata->res = realloc(thrdata->res, length);
+    thrdata->res = (uint32_t*) realloc(thrdata->res, length);
     sols_t *sols = (sols_t*) thrdata->res;
     work->thr = thr;
     do {
@@ -1565,8 +1575,36 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
       }
     }
   }
+  else if (thrdata->enqueue_kernels) {
+	status = thrdata->enqueue_kernels(clState, p_global_work_offset, globalThreads, localThreads);
+	if (unlikely(status != CL_SUCCESS))
+		return -1;
+  }
   else {
-    status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel, 1, p_global_work_offset,
+	  if (thrdata->flexibility.enqueue_for_real) {
+		  status = thrdata->flexibility.enqueue_for_real(clState, *p_global_work_offset, globalThreads[0], localThreads[0]);
+		  if (unlikely(status != CL_SUCCESS)) return -1;
+	  }
+	  else { // old, inflexible, inside-out dispatch
+		  status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel, 1, p_global_work_offset,
+			  globalThreads, localThreads, 0, NULL, NULL);
+		  if (unlikely(status != CL_SUCCESS)) {
+			  if (work->pool->algorithm.type == ALGO_ETHASH)
+				  cg_runlock(&gpu->eth_dag.lock);
+			  applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+			  return -1;
+		  }
+
+		  for (i = 0; i < clState->n_extra_kernels; i++) {
+			  status = clEnqueueNDRangeKernel(clState->commandQueue, clState->extra_kernels[i], 1, p_global_work_offset,
+				  globalThreads, localThreads, 0, NULL, NULL);
+			  if (unlikely(status != CL_SUCCESS)) {
+				  applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
+				  return -1;
+			  }
+		  }
+	  }
+    /*status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel, 1, p_global_work_offset,
       globalThreads, localThreads, 0, NULL, NULL);
 
     if (unlikely(status != CL_SUCCESS)) {
@@ -1583,7 +1621,7 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
         applog(LOG_ERR, "Error %d: Enqueueing kernel onto command queue. (clEnqueueNDRangeKernel)", status);
         return -1;
       }
-    }
+    }*/
   }
   
   status = clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer, CL_FALSE, 0,
@@ -1624,7 +1662,7 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
 //  clFinish(clState->commandQueue);
   }
 
-  return hashes;
+  return hashes; 
 }
 
 // Cleanup OpenCL memory on the GPU
@@ -1639,6 +1677,7 @@ static void opencl_thread_shutdown(struct thr_info *thr)
   if (clState) {
     clFinish(clState->commandQueue);
     clReleaseMemObject(clState->outputBuffer);
+	clReleaseMemObject(clState->MidstateBuf);
     clReleaseMemObject(clState->CLbuffer0);
     if (clState->buffer1)
       clReleaseMemObject(clState->buffer1);
@@ -1680,7 +1719,7 @@ struct device_drv opencl_drv = {
   /*.name = */      "GPU",
   /*.drv_detect = */    opencl_detect,
   /*.reinit_device = */   reinit_opencl_device,
-#if (defined HAVE_ADL) || (defined __linux__)
+#if (defined HAVE_ADL)
   /*.get_statline_before = */ get_opencl_statline_before,
 #else
   NULL,

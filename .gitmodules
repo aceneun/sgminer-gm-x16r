@@ -1,4 +1,4 @@
 [submodule "jansson"]
   path = submodules/jansson
-  url = https://github.com/akheron/jansson.git
+  url = https://github.com/KL0nLutiy/jansson.git
   

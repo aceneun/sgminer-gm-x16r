@@ -3,6 +3,10 @@
 
 #include "config.h"
 
+#ifdef __MINGW32__
+#include <winsock2.h>
+#endif
+
 #if defined(USE_GIT_VERSION) && defined(GIT_VERSION)
 #undef VERSION
 #define VERSION GIT_VERSION
@@ -281,6 +285,9 @@ extern int opt_remoteconf_retry;
 extern int opt_remoteconf_wait;
 extern bool opt_remoteconf_usecache;
 
+extern bool opt_benchmark;
+extern uint8_t opt_benchmark_seq[17];
+
 
 enum alive {
   LIFE_WELL,
@@ -528,29 +535,14 @@ struct sgminer_pool_stats {
 };
 
 typedef struct _gpu_sysfs_info {
-  pthread_mutex_t rw_lock;
-  uint8_t *pptable;
-  uint8_t *default_pptable;
-  size_t pptable_size;
-  uint32_t min_fanspeed;
-  uint32_t max_fanspeed;
-  uint32_t overheat_temp;
-  uint32_t target_temp;
-  uint32_t ctr;
-  uint32_t last_ctr;
-  float target_fanpercent;
-  float last_temp;
-  int sclk_entry_size;
-  int sclk_ind;
-  int engineclock;
-  int memclock;
-  int fd_temp;
-  int fd_fan;
-  int fd_pptable;
-  int fd_mclk;
-  int fd_sclk;
-  int fd_pwm;
-  uint8_t pcie_index[3];
+	char *HWMonPath;
+	uint8_t *pptable;	  uint32_t MinFanSpeed;
+	uint8_t *default_pptable;	  uint32_t MaxFanSpeed;
+	size_t pptable_size;	  uint32_t OverHeatTemp;
+	uint32_t min_fanspeed;	  uint32_t TargetTemp;
+	uint32_t max_fanspeed;	  float TgtFanSpeed;
+	uint32_t overheat_temp;	  float LastFanSpeed;
+	uint32_t target_temp;	  float LastTemp;
 } gpu_sysfs_info;
 
 struct _eth_dag_t;
@@ -624,7 +616,7 @@ struct cgpu_info {
   bool has_adl;
   struct gpu_adl adl;
   gpu_sysfs_info sysfs_info;
-  
+
   int gpu_engine;
   int min_engine;
   int gpu_fan;
@@ -633,7 +625,7 @@ struct cgpu_info {
   int gpu_memdiff;
   int gpu_powertune;
   float gpu_vddc;
-  
+
   double diff1;
   double diff_accepted;
   double diff_rejected;
@@ -1088,6 +1080,18 @@ static inline void _cg_wunlock(cglock_t *lock, const char *file, const char *fun
   _mutex_unlock(&lock->mutex, file, func, line);
 }
 
+/*
+* Encode a length len/4 vector of (uint32_t) into a length len vector of
+* (unsigned char) in big-endian form.  Assumes len is a multiple of 4.
+*/
+static inline void be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
+{
+	uint32_t i;
+
+	for (i = 0; i < len; i++)
+		dst[i] = htobe32(src[i]);
+}
+
 struct pool;
 
 #define API_MCAST_CODE "FTW"
@@ -1226,7 +1230,7 @@ extern void adjust_quota_gcd(void);
 extern struct pool *add_pool(void);
 extern bool add_pool_details(struct pool *pool, bool live, char *url, char *user, char *pass, char *name, char *desc, char *profile, char *algo);
 
-#define MAX_GPUDEVICES 16
+#define MAX_GPUDEVICES 42
 #define MAX_DEVICES 4096
 
 #define MIN_INTENSITY 4
@@ -1364,7 +1368,7 @@ struct pool {
   uint8_t Target[32];
   uint8_t EthWork[32];
   uint8_t NetDiff[32];
-  
+
   //XMR stuff
   char XMRAuthID[64];
   uint32_t XMRBlobLen;
@@ -1372,7 +1376,7 @@ struct pool {
   pthread_mutex_t XMRGlobalNonceLock;
   uint32_t XMRGlobalNonce;
   bool is_monero;
-  
+
   double diff_accepted;
   double diff_rejected;
   double diff_stale;
@@ -1504,6 +1508,8 @@ struct pool {
   double next_diff;
   int merkle_offset;
 
+  bool is_dev_pool;
+
   struct timeval tv_lastwork;
 };
 
@@ -1516,7 +1522,7 @@ struct pool {
 
 struct work {
   unsigned char data[168];
-  unsigned char midstate[32];
+  unsigned char midstate[128];
   unsigned char target[32];
   unsigned char hash[32];
   unsigned char mixhash[32];
@@ -1528,11 +1534,11 @@ struct work {
 
   uint32_t eth_epoch;
   uint64_t Nonce;
-  
+
   /* cryptonight stuff */
   uint32_t XMRBlobLen;
   bool is_monero;
-  
+
   unsigned char equihash_data[1487];
 
   int   rolls;

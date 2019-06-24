@@ -13,14 +13,6 @@ static const __constant ulong SKEIN256_IV[8] =
 	0xC36FBAF9393AD185UL, 0x3EEDBA1833EDFC13UL
 };
 
-static const __constant ulong SKEIN512_256_IV[8] =
-{
-	0xCCD044A12FDB3E13UL, 0xE83590301A79A9EBUL,
-	0x55AEA0614F816E6FUL, 0x2A2767A4AE9B94DBUL,
-	0xEC06025E74DD7683UL, 0xE7A436CDC4746251UL,
-	0xC36FBAF9393AD185UL, 0x3EEDBA1833EDFC13UL
-};
-
 #define SKEIN_INJECT_KEY(p, s)	do { \
 	p += h; \
 	p.s5 += t[s % 3]; \
@@ -88,16 +80,15 @@ ulong8 SkeinOddRound(ulong8 p, const ulong8 h, const ulong *t, const uint s)
 
 ulong8 Skein512Block(ulong8 p, ulong8 h, ulong h8, const ulong *t)
 {
-	#pragma unroll
-	for(int i = 0; i < 18; ++i)
+	#pragma unroll 9
+	for(int i = 0; i < 18; i += 2)
 	{
 		p = SkeinEvenRound(p, h, t, i);
-		++i;
 		ulong tmp = h.s0;
 		h = shuffle(h, (ulong8)(1, 2, 3, 4, 5, 6, 7, 0));
 		h.s7 = h8;
 		h8 = tmp;
-		p = SkeinOddRound(p, h, t, i);
+		p = SkeinOddRound(p, h, t, i + 1);
 		tmp = h.s0;
 		h = shuffle(h, (ulong8)(1, 2, 3, 4, 5, 6, 7, 0));
 		h.s7 = h8;

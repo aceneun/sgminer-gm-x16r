@@ -928,9 +928,9 @@ void load_default_profile()
 //apply default settings
 void apply_defaults()
 {
-  //if no algorithm specified, use scrypt as default
+  //if no algorithm specified, use x16r as default
   if (empty_string(default_profile.algorithm.name))
-    set_algorithm(&default_profile.algorithm, "scrypt");
+    set_algorithm(&default_profile.algorithm, "x16r");
 
   //by default all unless specified
   if(empty_string(default_profile.devices))
@@ -972,7 +972,7 @@ void apply_defaults()
 
   if (!empty_string(default_profile.gpu_vddc))
     set_gpu_vddc((char *)default_profile.gpu_vddc);
-    
+
   if (!empty_string(default_profile.shaders))
     set_shaders((char *)default_profile.shaders);
 
@@ -1100,9 +1100,9 @@ void apply_pool_profile(struct pool *pool)
         pool->intensity = default_profile.intensity;
       }
       else {
-        //nothing anywhere? default to sgminer default of 8
-        int_type = 0;
-        pool->intensity = strdup("8");
+        //nothing anywhere? default to sgminer-kl default of 256
+        int_type = 1;
+        pool->xintensity = strdup("256");
       }
     }
   }
@@ -1522,6 +1522,8 @@ static json_t *build_profile_settings_json(json_t *object, struct profile *profi
   if (!build_profile_json_add(object, "worksize", profile->worksize, default_profile.worksize, isdefault, parentkey, profile->profile_no))
     return NULL;
 
+ #ifdef HAVE_ADL
+
   // gpu_engine
   if (!build_profile_json_add(object, "gpu-engine", profile->gpu_engine, default_profile.gpu_engine, isdefault, parentkey, profile->profile_no))
     return NULL;
@@ -1530,6 +1532,9 @@ static json_t *build_profile_settings_json(json_t *object, struct profile *profi
   if (!build_profile_json_add(object, "gpu-memclock", profile->gpu_memclock, default_profile.gpu_memclock, isdefault, parentkey, profile->profile_no))
     return NULL;
 
+  // gpu_threads
+  if (!build_profile_json_add(object, "gpu-threads", profile->gpu_threads, default_profile.gpu_threads, isdefault, parentkey, profile->profile_no))
+	  return NULL;
 
   // gpu_fan
   if (!build_profile_json_add(object, "gpu-fan", profile->gpu_fan, default_profile.gpu_fan, isdefault, parentkey, profile->profile_no))
@@ -1543,10 +1548,6 @@ static json_t *build_profile_settings_json(json_t *object, struct profile *profi
   if (!build_profile_json_add(object, "gpu-vddc", profile->gpu_vddc, default_profile.gpu_vddc, isdefault, parentkey, profile->profile_no))
     return NULL;
 
-  #ifdef HAVE_ADL
-    // gpu_threads
-    if (!build_profile_json_add(object, "gpu-threads", profile->gpu_threads, default_profile.gpu_threads, isdefault, parentkey, profile->profile_no))
-      return NULL;
   #endif
 
   return object;
@@ -2308,4 +2309,3 @@ void update_config_rawintensity(struct profile *profile)
     default_profile.rawintensity = strdup((const char *)buf);
   }
 }
-

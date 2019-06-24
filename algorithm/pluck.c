@@ -187,18 +187,6 @@ void sha256_transform(uint32_t *state, const uint32_t *block, int swap)
 		state[i] += S[i];
 }
 
-/*
- * Encode a length len/4 vector of (uint32_t) into a length len vector of
- * (unsigned char) in big-endian form.  Assumes len is a multiple of 4.
- */
-static inline void
-be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
-{
-	uint32_t i;
-
-	for (i = 0; i < len; i++)
-		dst[i] = htobe32(src[i]);
-}
 static inline void be32enc(void *pp, uint32_t x)
 {
 	uint8_t *p = (uint8_t *)pp;

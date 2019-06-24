@@ -10,6 +10,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include "ocl/build_kernel.h"   // For the build_kernel_data type
+#include "ocl/flexible_kernel_functions.h"
+#include "ocl/cl_state.h"
 
 typedef enum {
   ALGO_UNK,
@@ -20,6 +22,18 @@ typedef enum {
   ALGO_X13,
   ALGO_X14,
   ALGO_X15,
+  ALGO_X16R,
+  ALGO_X16S,
+  ALGO_X17,
+  ALGO_XEVAN,
+  ALGO_PHI,
+  ALGO_TRIBUS,
+  ALGO_AERGO,
+  ALGO_C11,
+  ALGO_LYRA2Z,
+  ALGO_POLYTIMOS,
+  ALGO_GEEK,
+  ALGO_SKUNK,
   ALGO_KECCAK,
   ALGO_QUARK,
   ALGO_TWE,
@@ -74,10 +88,13 @@ typedef struct _algorithm_t {
   long rw_buffer_size;
   cl_command_queue_properties cq_properties;
   void(*regenhash)(struct work *);
-  void(*precalc_hash)(struct _dev_blk_ctx *, uint32_t *, uint32_t *);
+  void(*calc_midstate)(struct work *);
+  void(*prepare_work)(struct _dev_blk_ctx *, uint32_t *, uint32_t *);
   cl_int(*queue_kernel)(struct __clState *, struct _dev_blk_ctx *, cl_uint);
   void(*gen_hash)(const unsigned char *, unsigned int, unsigned char *);
   void(*set_compile_options)(struct _build_kernel_data *, struct cgpu_info *, struct _algorithm_t *);
+  cl_int(*enqueue_kernels)(struct __clState *, size_t*, size_t*, size_t*);
+  flexible_algorithm_functions_t flexibility;
 } algorithm_t;
 
 typedef struct _algorithm_settings_t
@@ -97,10 +114,13 @@ typedef struct _algorithm_settings_t
 	long rw_buffer_size;
 	cl_command_queue_properties cq_properties;
 	void     (*regenhash)(struct work *);
-	void     (*precalc_hash)(struct _dev_blk_ctx *, uint32_t *, uint32_t *);
+	void(*calc_midstate)(struct work *);
+	void(*prepare_work)(struct _dev_blk_ctx *, uint32_t *, uint32_t *);
 	cl_int   (*queue_kernel)(struct __clState *, struct _dev_blk_ctx *, cl_uint);
 	void     (*gen_hash)(const unsigned char *, unsigned int, unsigned char *);
 	void     (*set_compile_options)(build_kernel_data *, struct cgpu_info *, algorithm_t *);
+	cl_int   (*enqueue_kernels)(struct __clState *, size_t*, size_t*, size_t*);
+	flexible_algorithm_functions_t flexibility;
 } algorithm_settings_t;
 
 /* Set default parameters based on name. */

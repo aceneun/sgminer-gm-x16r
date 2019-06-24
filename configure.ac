@@ -1,18 +1,4 @@
-##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-m4_define([v_maj], [5])
-m4_define([v_min], [5])
-m4_define([v_mic], [5])
-m4_define([v_rev], [gm-a])
-##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-m4_ifdef([v_rev], [m4_define([v_ver], [v_maj.v_min.v_mic-v_rev])], [m4_define([v_ver], [v_maj.v_min.v_mic])])
-m4_define([lt_rev], m4_eval(v_maj + v_min))
-m4_define([lt_cur], v_mic)
-m4_define([lt_age], v_min)
-##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-
-AC_INIT([sgminer], [v_ver], [veox@wemakethings.net], [sgminer], [https://github.com/sgminer-dev/sgminer])
+AC_INIT([sgminer-kl], [1.0.9], [], [sgminer-kl], [https://github.com/KL0nLutiy/sgminer-kl])
 
 AC_PREREQ(2.59)
 AC_CANONICAL_SYSTEM
@@ -23,23 +9,6 @@ AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_USE_SYSTEM_EXTENSIONS
-
-##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-m4_ifdef([v_rev], , [m4_define([v_rev], [0])])
-m4_ifdef([v_rel], , [m4_define([v_rel], [])])
-AC_DEFINE_UNQUOTED(SGMINER_MAJOR_VERSION, [v_maj], [Major version])
-AC_DEFINE_UNQUOTED(SGMINER_MINOR_VERSION, [v_min], [Minor version])
-AC_DEFINE_UNQUOTED(SGMINER_MINOR_SUBVERSION, [v_mic], [Micro version])
-AC_DEFINE_UNQUOTED(SGMINER_REVISON, [v_rev], [Revison])
-version_info="lt_rev:lt_cur:lt_age"
-release_info="v_rel"
-AC_SUBST(version_info)
-AC_SUBST(release_info)
-##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-VMAJ=v_maj
-AC_SUBST(VMAJ)
 
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
